@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.*
+!.env.example
+data/
+data-test-*/
+*.log
+coverage/
+public/assets/generated/

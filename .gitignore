@@ -1,0 +1,27 @@
+# === 敏感：绝不提交 ===
+.env
+.env.*
+!.env.example
+.hanako-context.md
+*_审查记录.md
+
+# === 内部资料（按需公开，想传就删掉对应行）===
+拾光育苗_参赛方案_v1.md
+拾光育苗_后端接口文档_v1.md
+拾光育苗_AI_Prompt设计_v1.md
+
+# === 临时脚本与中间产物 ===
+_make_icon.py
+_img_probe.txt
+_img.json
+_*.py
+_*.txt
+
+# === 依赖与构建产物 ===
+node_modules/
+coverage/
+*.log
+data-test-*/
+
+# === 微信开发者工具个人配置 ===
+project.private.config.json
