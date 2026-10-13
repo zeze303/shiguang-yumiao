@@ -24,4 +24,8 @@ services:
       - key: IMAGE_MODEL
         value: gpt-image-2
       - key: WX_CONTENT_SECURITY
-        value: "false"
+        value: "true"
+      - key: NODE_ENV
+        value: production
+      - key: AI_SINGLE_INSTANCE
+        value: "true"
