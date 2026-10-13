@@ -31,6 +31,8 @@ check 逐一执行项目 JS 的 node --check 并检查禁止的 emoji，排除 n
 | IMAGE_API_KEY | 生图密钥，空值直接使用默认封面 |
 | IMAGE_API_BASE | 默认 https://quanzil.com/v1 |
 | IMAGE_MODEL | 默认 gpt-image-2 |
+| SUPABASE_COVERS_BUCKET | 默认 shiguang-covers；生成封面使用 public bucket 的 poems/ 子目录 |
+| IMAGE_DOWNLOAD_HOSTS | 生图URL下载可信主机，逗号分隔精确域名；为空时仅允许 IMAGE_API_BASE 主机 |
 | WX_CONTENT_SECURITY | 默认 false；设为 true 且微信凭据齐全后启用文本审核 |
 
 在既有 Supabase 库执行 supabase_schema_app.sql；前提是 growth_students.id 为 text，growth_records 已存在。SQL 包含七张 app_* 表的索引、外键、唯一约束、RLS，以及原子兑换/作废函数；没有修改 growth_*。本次未执行远程迁移。阶段 2 不需要新增表或列。
@@ -104,12 +106,12 @@ services/contentSecurity.js 提供 checkText(content, openid)、setChecker(async
 
 POST /ai/poem 先审核文字并写 app_growth_poems，立即返回包含 title/content 的诗记录，另有 id、studentId、period、coverUrl 等字段。初始 coverUrl=/assets/default-poem-cover.svg。无素材返回422，并明确提示“暂无可用于写诗的素材，请先添加陪伴记录”；成长诗不调用摘要。模型调用/结构校验失败或审核拒绝返回静态兜底文字，没有诗 ID，不入库也不生图；审核服务和数据库错误仍阻断。
 
-响应后后台调用 IMAGE_API_BASE/images/generations，风格为童趣手绘、暖色、红金协调、无文字无水印。生图超时60秒，失败不影响文字并保留默认封面。成功 URL 更新 cover_url；支持 HTTPS URL 或 b64_json（PNG/JPEG/WebP）保存到 public/assets/generated。前端轮询 GET /poems?student_id=... 并按诗 ID 找 coverUrl，不需要再次调用 AI。一次 POST 是新诗；同诗 ID 进行中任务去重，不受缓存淘汰影响。完成去重缓存最多1024条、TTL为24小时，入队和任务结束时清理过期项并淘汰最旧项；过期或淘汰后再次显式入队允许生成。GET 永不触发生图，已保存封面复用。
+响应后后台调用 IMAGE_API_BASE/images/generations，风格为童趣手绘、暖色、红金协调、无文字无水印。生图超时60秒，失败不影响文字并保留默认封面。支持 b64_json 或 HTTPS URL：下载后通过 PNG/JPEG/WebP 文件头校验，最多12MiB，使用随机 UUID 文件名上传到 Supabase Storage，再把绝对 public URL 写入 cover_url。不会写入本地生成目录，也不保留上游临时URL。URL下载仅允许 IMAGE_DOWNLOAD_HOSTS 配置的可信域名（默认生图API主机），禁止跳转、账号密码和自定义端口，下载/Storage请求超时15秒。缺少生图key或Supabase URL/service-role key直接回退默认封面，不调用生图、不上传。前端轮询 GET /poems?student_id=... 并按诗 ID 找 coverUrl，不需要再次调用 AI。一次 POST 是新诗；同诗 ID 进行中任务去重，不受缓存淘汰影响。完成去重缓存最多1024条、TTL为24小时，入队和任务结束时清理过期项并淘汰最旧项；过期或淘汰后再次显式入队允许生成。GET 永不触发生图，已保存封面复用。
 
-后台任务是单进程内存任务，进程中断保留默认封面，不自动重试。选用了规格允许的失败回退策略；多实例/需要可靠重试时应增加持久任务队列。base64 图片需部署持久磁盘，长期有效性取决于存储；上游 URL 的有效期需真实联调确认。静态封面可由 URL 访问，不包含姓名/地址，只用已审核诗文生成。
+后台任务是单进程内存任务，进程中断保留默认封面，不自动重试。选用了规格允许的失败回退策略；多实例/需要可靠重试时应增加持久任务队列。Storage 默认使用 shiguang-covers bucket 的 poems/<uuid>.png|jpg|webp，返回 https://<ref>.supabase.co/storage/v1/object/public/shiguang-covers/poems/<uuid>.<ext>。bucket 不存在时通过服务端凭据创建为 public，限制 MIME 和12MiB；已存在的 private bucket 不自动公开，直接回退。上传错误也回退仓库内随部署发布的 /assets/default-poem-cover.svg，它不依赖临时生成文件；前端需将此默认相对路径按后端域名解析，生成成功的封面始终为Storage绝对URL。静态封面不含姓名/地址，只用已审核诗文生成。历史 /assets/generated/* 记录不会自动迁移，已有本地文件应单独迁移或将失效记录重置默认封面。
 
 ## 测试与真实联调
 
 测试覆盖阶段1登录/注销、结对权限、地址脱敏、评分；阶段2陪伴记录校验/权限、admin所有接口、重复结对、解除后权限、摘要子调用、最近3条历史、去重重生成及重复兜底、危机引导、审核拒绝不落库、微信token缓存与失败阻断、生图成功/失败、任务去重及不阻塞文字。所有外部 fetch 均 mock。
 
-仍需真实环境联调：Supabase迁移及并发唯一约束、微信登录和 msg_sec_check 权限/配额、DeepSeek JSON遵循率/实际文案、quanzil的模型参数与URL/base64返回格式、小程序静态封面域名配置。部署需HTTPS与合法域名，配置网关登录/AI限流；定期清理过期会话，按部署拓扑收紧CORS。密钥不入库、不下发前端、不写日志。
+仍需真实环境联调：Supabase迁移及并发唯一约束、微信登录和 msg_sec_check 权限/配额、DeepSeek JSON遵循率/实际文案、quanzil的模型参数与URL/base64返回格式、Storage bucket public状态、service-role创建/上传权限、对象可公开读取及小程序Storage下载合法域名配置。生图返回CDN URL时还需确认可信域名并加入 IMAGE_DOWNLOAD_HOSTS。部署需HTTPS与合法域名，配置网关登录/AI限流；定期清理过期会话，按部署拓扑收紧CORS。密钥不入库、不下发前端、不写日志。

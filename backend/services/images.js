@@ -1,5 +1,4 @@
-const fs = require('node:fs/promises');
-const path = require('node:path');
+const { createClient } = require('@supabase/supabase-js');
 const crypto = require('node:crypto');
 const DEFAULT_COVER = '/assets/default-poem-cover.svg';
 const MODEL = process.env.IMAGE_MODEL || 'gpt-image-2';
@@ -20,8 +19,56 @@ function pruneCompleted() {
   }
 }
 function waitForIdle() { return Promise.allSettled([...pending]); }
+const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
+async function uploadCover(bytes) {
+  const extension = bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) ? 'png' :
+    bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255 ? 'jpg' :
+    bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP' ? 'webp' : null;
+  if (!extension || bytes.length > MAX_IMAGE_BYTES) return DEFAULT_COVER;
+  const bucket = process.env.SUPABASE_COVERS_BUCKET || 'shiguang-covers';
+  if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(bucket)) return DEFAULT_COVER;
+  const client = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(15000) }) }
+  });
+  let result = await client.storage.getBucket(bucket);
+  if (result.error) {
+    if (!['404', 'Bucket not found'].includes(String(result.error.statusCode)) && !/bucket not found/i.test(result.error.message)) return DEFAULT_COVER;
+    const created = await client.storage.createBucket(bucket, { public: true, fileSizeLimit: MAX_IMAGE_BYTES, allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'] });
+    // Re-read after a creation race; never change an existing private bucket to public.
+    if (created.error) {
+      result = await client.storage.getBucket(bucket);
+      if (result.error || result.data?.public !== true) return DEFAULT_COVER;
+    }
+  } else if (result.data?.public !== true) return DEFAULT_COVER;
+  const filename = `poems/${crypto.randomUUID()}.${extension}`;
+  const uploaded = await client.storage.from(bucket).upload(filename, bytes, {
+    contentType: extension === 'jpg' ? 'image/jpeg' : `image/${extension}`, upsert: false, cacheControl: '31536000'
+  });
+  if (uploaded.error) return DEFAULT_COVER;
+  const { data } = client.storage.from(bucket).getPublicUrl(filename);
+  return data.publicUrl;
+}
+async function downloadCover(rawUrl, apiBase) {
+  const url = new URL(rawUrl);
+  // Provider URLs are untrusted. Only explicitly trusted image hosts, no redirects or private URLs.
+  const hosts = (process.env.IMAGE_DOWNLOAD_HOSTS || new URL(apiBase).hostname).split(',').map(host => host.trim().toLowerCase());
+  if (url.protocol !== 'https:' || url.username || url.password || url.port || !hosts.includes(url.hostname.toLowerCase())) throw new Error('不允许的图片来源');
+  const response = await fetch(url.href, { signal: AbortSignal.timeout(15000), redirect: 'error' });
+  if (!response.ok || Number(response.headers.get('content-length')) > MAX_IMAGE_BYTES) throw new Error('图片下载失败');
+  const chunks = [];
+  let size = 0;
+  if (!response.body) throw new Error('图片内容为空');
+  for await (const chunk of response.body) {
+    size += chunk.length;
+    if (size > MAX_IMAGE_BYTES) throw new Error('图片过大');
+    chunks.push(Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
 async function generateCover(prompt) {
-  if (!process.env.IMAGE_API_KEY) return DEFAULT_COVER;
+  // No paid generation when durable storage cannot be used.
+  if (!process.env.IMAGE_API_KEY || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return DEFAULT_COVER;
   const base = (process.env.IMAGE_API_BASE || 'https://quanzil.com/v1').replace(/\/$/, '');
   try {
     const response = await fetch(`${base}/images/generations`, {
@@ -32,21 +79,12 @@ async function generateCover(prompt) {
     if (!response.ok) return DEFAULT_COVER;
     const body = await response.json();
     const item = body.data?.[0];
-    if (typeof item?.b64_json === 'string' && item.b64_json.length <= 16 * 1024 * 1024) {
-      const bytes = Buffer.from(item.b64_json, 'base64');
-      const extension = bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) ? 'png' :
-        bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255 ? 'jpg' :
-        bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP' ? 'webp' : null;
-      if (!extension) return DEFAULT_COVER;
-      const filename = `${crypto.randomUUID()}.${extension}`;
-      const directory = path.join(__dirname, '..', 'public', 'assets', 'generated');
-      await fs.mkdir(directory, { recursive: true });
-      await fs.writeFile(path.join(directory, filename), bytes, { flag: 'wx' });
-      return `/assets/generated/${filename}`;
+    if (typeof item?.b64_json === 'string') {
+      if (item.b64_json.length > 16 * 1024 * 1024) return DEFAULT_COVER;
+      return await uploadCover(Buffer.from(item.b64_json, 'base64'));
     }
     if (typeof item?.url !== 'string') return DEFAULT_COVER;
-    const url = new URL(item.url);
-    return url.protocol === 'https:' && !url.username && !url.password ? url.href : DEFAULT_COVER;
+    return await uploadCover(await downloadCover(item.url, base));
   } catch { return DEFAULT_COVER; }
 }
 function enqueueCover(poemId, prompt, update) {

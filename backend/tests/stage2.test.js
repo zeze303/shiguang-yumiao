@@ -11,6 +11,9 @@ process.env.IMAGE_API_KEY = 'mock-key';
 test('stage2 permissions, suggestion deduplication, async cover fallback and admin endpoints', async t => {
   const db = require('../services/database');
   const { createApp } = require('../server');
+  // Database was initialized in JSON mode; only image storage configuration is mocked below.
+  process.env.SUPABASE_URL = 'https://mock-project.supabase.co';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'mock-key';
   const dir = await fs.mkdtemp(path.join(__dirname, '..', 'data-test-'));
   const file = path.join(dir, 'db.json');
   db.setLocalFileForTests(file);

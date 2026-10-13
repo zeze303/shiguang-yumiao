@@ -89,9 +89,15 @@ test('cover success updates once, duplicate enqueue reuses in-flight/completed w
   const originalFetch = global.fetch;
   const originalKey = process.env.IMAGE_API_KEY;
   const originalBase = process.env.IMAGE_API_BASE;
+  const originalUrl = process.env.SUPABASE_URL;
+  const originalServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.SUPABASE_URL = 'https://mock-project.supabase.co';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'mock-key';
   t.after(async () => {
     await images.waitForIdle();
     global.fetch = originalFetch;
+    originalUrl === undefined ? delete process.env.SUPABASE_URL : process.env.SUPABASE_URL = originalUrl;
+    originalServiceKey === undefined ? delete process.env.SUPABASE_SERVICE_ROLE_KEY : process.env.SUPABASE_SERVICE_ROLE_KEY = originalServiceKey;
     originalKey === undefined ? delete process.env.IMAGE_API_KEY : process.env.IMAGE_API_KEY = originalKey;
     originalBase === undefined ? delete process.env.IMAGE_API_BASE : process.env.IMAGE_API_BASE = originalBase;
   });
@@ -100,12 +106,16 @@ test('cover success updates once, duplicate enqueue reuses in-flight/completed w
   let calls = 0;
   let updates = 0;
   global.fetch = async (url, options) => {
+    if (new URL(url).hostname === 'mock-project.supabase.co') {
+      if (new URL(url).pathname.includes('/bucket/')) return Response.json({ public: true });
+      return Response.json({ Key: 'uploaded' });
+    }
     assert.equal(url, 'https://quanzil.com/v1/images/generations');
     assert.equal(JSON.parse(options.body).model, 'gpt-image-2');
     calls++;
-    return { ok: true, json: async () => ({ data: [{ url: 'https://images.example/cover.png' }] }) };
+    return Response.json({ data: [{ b64_json: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).toString('base64') }] });
   };
-  const update = async (id, cover) => { updates++; assert.equal(id, 'cover-once'); assert.equal(cover, 'https://images.example/cover.png'); };
+  const update = async (id, cover) => { updates++; assert.equal(id, 'cover-once'); assert.match(cover, /^https:\/\/mock-project\.supabase\.co\/storage\/v1\/object\/public\/shiguang-covers\/poems\/.+\.png$/); };
   images.enqueueCover('cover-once', '一首诗', update);
   images.enqueueCover('cover-once', '一首诗', update);
   await images.waitForIdle();
