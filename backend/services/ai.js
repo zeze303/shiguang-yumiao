@@ -30,12 +30,12 @@ async function generate(kind, context, history = []) {
   else user = JSON.stringify(context);
   let response;
   try {
-    response = await fetch('https://api.deepseek.com/chat/completions', {
+    response = await require('./aiUsage').paidCall(() => fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST', signal: AbortSignal.timeout(30000),
       headers: { Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: MODEL, messages: [{ role: 'system', content: PROMPTS[kind] }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_tokens: 1500 })
-    });
-  } catch { throw Object.assign(new Error('DeepSeek 请求超时或网络不可用'), { status: 502 }); }
+    }));
+  } catch (error) { if (error.status === 429) throw error; throw Object.assign(new Error('DeepSeek 请求超时或网络不可用'), { status: 502 }); }
   if (!response.ok) throw Object.assign(new Error(`DeepSeek 请求失败（HTTP ${response.status}）`), { status: 502 });
   let output;
   try {

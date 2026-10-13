@@ -1,5 +1,6 @@
 const request = require('./request');
 const config = require('../config');
+const {uuid} = require('./idempotency');
 const fields = ['psychology','aesthetic','finance','behavior'];
 const labels = ['心理','美育','财商','行为'];
 const colors = ['#6b4c8a','#c0392b','#d4a74a','#2d7d46'];
@@ -97,8 +98,8 @@ module.exports = {
   logs: id => request('/companion-logs',{data:id?{student_id:id}:{}}).then(list).then(rows=>rows.map(log)),
   createLog: data => request('/companion-logs',{method:'POST',data:{studentId:data.studentId || data.student_id,type:data.type,content:data.content,images:data.images || []}}).then(log),
   poems: id => request('/poems',{data:id?{student_id:id}:{}}).then(list).then(rows=>rows.map(poem)),
-  generatePoem: data => request('/ai/poem',{method:'POST',data}).then(poem),
-  suggest: studentId => request('/ai/suggest',{method:'POST',data:{studentId}}),
+  generatePoem: (data,key=uuid()) => request('/ai/poem',{method:'POST',data,headers:{'Idempotency-Key':key}}).then(poem),
+  suggest: (studentId,key=uuid()) => request('/ai/suggest',{method:'POST',data:{studentId},headers:{'Idempotency-Key':key}}),
   overview: async () => {
     const [raw,rows,students,links]=await Promise.all([request('/admin/overview'),request('/admin/alerts').then(list),request('/admin/students').then(list),relations()]);
     return overview(raw,rows.map(s=>student(s,links)),students,links);

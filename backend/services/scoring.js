@@ -29,7 +29,13 @@ const LEVELS = [
   { min: 0, label: "高危", cls: "level-danger", desc: "严重缺失，强制介入干预" }
 ];
 
+function validScore(value, max = 100) {
+  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) return null;
+  const score = Number(value);
+  return Number.isFinite(score) && score >= 0 && score <= max ? score : null;
+}
 function getLevel(score) {
+  if (validScore(score) === null) return null;
   for (const l of LEVELS) {
     if (score >= l.min) return { label: l.label, cls: l.cls, desc: l.desc };
   }
@@ -62,6 +68,7 @@ function calcFromSubscores(subscores) {
  * 从 record 对象提取四维分数（优先子指标，回退旧字段）
  */
 function extractDims(record) {
+  if (!record) return null;
   let subscores = record.subscores;
   if (typeof subscores === 'string') {
     try { subscores = JSON.parse(subscores); }
@@ -69,29 +76,27 @@ function extractDims(record) {
   }
   const fromSub = calcFromSubscores(subscores);
   if (fromSub) return fromSub;
-  return {
-    psychology: Number(record.psychology) || 0,
-    aesthetic: Number(record.aesthetic) || 0,
-    finance: Number(record.finance) || 0,
-    behavior: Number(record.behavior) || 0
-  };
+  const dims = Object.fromEntries(Object.keys(SCOPE).map(key => [key, validScore(record[key])]));
+  return Object.values(dims).some(value => value === null) ? null : dims;
 }
 
 function calcOverallFromRecord(record) {
   const dims = extractDims(record);
-  return Math.round((dims.psychology + dims.aesthetic + dims.finance + dims.behavior) / 4);
+  return dims ? calcOverall(dims.psychology, dims.aesthetic, dims.finance, dims.behavior) : null;
 }
 
 function calcOverall(psychology, aesthetic, finance, behavior) {
-  return Math.round((psychology + aesthetic + finance + behavior) / 4);
+  const values = [psychology, aesthetic, finance, behavior].map(value => validScore(value));
+  return values.includes(null) ? null : Math.round(values.reduce((sum, value) => sum + value, 0) / 4);
 }
 
 function detectWarningsFromRecord(record) {
   const dims = extractDims(record);
-  return detectWarnings(dims.psychology, dims.aesthetic, dims.finance, dims.behavior);
+  return dims ? detectWarnings(dims.psychology, dims.aesthetic, dims.finance, dims.behavior) : [];
 }
 
 function detectWarnings(psychology, aesthetic, finance, behavior) {
+  if ([psychology, aesthetic, finance, behavior].some(value => validScore(value) === null)) return [];
   const warns = [];
   const map = { psychology: "心理", aesthetic: "美育", finance: "财商", behavior: "行为" };
   const dims = { psychology, aesthetic, finance, behavior };
@@ -126,16 +131,17 @@ function emptySubscores() {
 
 // 旧数据转换
 function convertOldScore(n) {
-  return Math.round((Number(n) || 1) / 5 * 100);
+  const value = validScore(n, 5);
+  return value === null ? null : Math.round(value / 5 * 100);
 }
 
 function convertOldRecord(record) {
   return {
     ...record,
-    psychology: convertOldScore(record.psychology || record.scores?.psychology || 1),
-    aesthetic: convertOldScore(record.aesthetic || record.scores?.aesthetic || 1),
-    finance: convertOldScore(record.finance || record.scores?.finance || 1),
-    behavior: convertOldScore(record.behavior || record.scores?.behavior || 1),
+    psychology: convertOldScore(record.psychology ?? record.scores?.psychology),
+    aesthetic: convertOldScore(record.aesthetic ?? record.scores?.aesthetic),
+    finance: convertOldScore(record.finance ?? record.scores?.finance),
+    behavior: convertOldScore(record.behavior ?? record.scores?.behavior),
   };
 }
 

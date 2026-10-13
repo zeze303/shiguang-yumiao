@@ -28,6 +28,8 @@ test('empty materials and summary failures remain usable; poem errors provide sa
   replace(ai, 'generateSuggest', async context => {
     generateCalls++;
     if (failGeneration) throw Object.assign(new Error('生成结构无效'), { status: 502 });
+    assert.equal(context.scores, null);
+    assert.equal(context.level, null);
     assert.ok(context.recentLogs.length > 0);
     assert.ok(context.recentLogs.every(value => value.length <= 200));
     assert.equal(JSON.stringify(context.recentLogs).includes('张小明'), false);
@@ -69,7 +71,7 @@ test('empty materials and summary failures remain usable; poem errors provide sa
   await new Promise(resolve => server.once('listening', resolve));
   t.after(() => new Promise(resolve => server.close(resolve)));
   const call = async kind => {
-    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/app/ai/${kind}`, { method: 'POST', headers: { Authorization: `Bearer ${'1'.repeat(64)}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ studentId: 's', period: '本期' }) });
+    const response = await fetch(`http://127.0.0.1:${server.address().port}/api/app/ai/${kind}`, { method: 'POST', headers: { 'Idempotency-Key': require('node:crypto').randomUUID(), Authorization: `Bearer ${'1'.repeat(64)}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ studentId: 's', period: '本期' }) });
     return { status: response.status, body: await response.json() };
   };
   logs = [];

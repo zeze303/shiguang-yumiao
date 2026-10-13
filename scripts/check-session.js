@@ -23,6 +23,13 @@ module.exports=async function checkSession(){
   pending[1].success({statusCode:200,data:{success:true,data:{token:'new-token',role:'volunteer',profile:{id:'new'}}}});await newLogin;assert.equal(wx.getStorageSync('shiguang-token'),'new-token');
   // 迟到的旧401也不得使新账号退出。
   let previousRequest;wx.request=opts=>previousRequest=opts;const oldCall=api.students();const stale=assert.rejects(oldCall,e=>e.code==='STALE_SESSION');app.clearSession();Object.assign(app.globalData,{session:{token:'latest',role:'volunteer',profile:{id:'latest'}},loginRequired:false});wx.setStorageSync('shiguang-token','latest');previousRequest.success({statusCode:401,data:{success:false}});await stale;assert.equal(wx.getStorageSync('shiguang-token'),'latest');
+  // 同角色刷新只更换token、不变epoch：旧401不得撤销刚建立的新会话。
+  initialize();pages=[makePage('profile',{status:'ready'})];let oldTokenRequest;
+  wx.request=opts=>{if(opts.url.endsWith('/login'))opts.success({statusCode:200,data:{success:true,data:{token:'same-role-new-token',role:'volunteer',profile:{id:'v1',name:'林知夏'}}}});else oldTokenRequest=opts;};
+  const tokenEpoch=app.globalData.sessionEpoch;const tokenCall=api.students();const tokenStale=assert.rejects(tokenCall,e=>e.code==='STALE_SESSION');
+  await app.refreshRole();assert.equal(app.globalData.sessionEpoch,tokenEpoch);const movesBefore401=redirects.length;
+  oldTokenRequest.success({statusCode:401,data:{success:false}});await tokenStale;
+  assert.equal(wx.getStorageSync('shiguang-token'),'same-role-new-token');assert.equal(app.globalData.session.token,'same-role-new-token');assert.equal(app.globalData.role,'volunteer');assert.equal(app.globalData.loginRequired,false);assert.equal(redirects.length,movesBefore401);
   const error=Object.assign(new Error('expired'),{status:401});
   for(const name of ['bindings','logs','poems','students','volunteers','pairing']){
    initialize();if(['students','volunteers'].includes(name)){app.globalData.session.role='admin';app.globalData.role='admin';}const page=makePage(name,{status:'ready',items:[{id:'old',name:'旧数据'}],filtered:[{id:'old'}],children:[{id:'old'}]});pages=[page];
@@ -43,6 +50,6 @@ module.exports=async function checkSession(){
   initialize();wx.request=opts=>opts.success({statusCode:403,data:{success:false}});await assert.rejects(()=>app.refreshRole(),e=>e.status===403);assert.equal(app.globalData.session,null);assert.equal(redirects[redirects.length-1],'/pages/guest/index');
   assert.equal(ui.home(null),'/pages/guest/index');
   const guestMarkup=require('fs').readFileSync(require('path').join(__dirname,'../pages/guest/index.wxml'),'utf8');assert(!guestMarkup.includes('role-tabs'));assert(guestMarkup.includes('bindtap="certify"'));assert(guestMarkup.includes('面向乡村留守儿童帮扶志愿者'));
-  console.log('PASS: logout成功/断网回游客、401/clearSession回游客、登录竞态与旧401隔离、列表清理、403/前台角色降级、applyRole正确首页、guest独立介绍与认证');
+  console.log('PASS: logout成功/断网回游客、401/clearSession回游客、登录竞态与旧401隔离、同角色token刷新迟到401隔离、列表清理、403/前台角色降级、applyRole正确首页、guest独立介绍与认证');
  }finally{Object.assign(config,original);wx.request=saved.request;wx.login=saved.login;wx.reLaunch=saved.reLaunch;wx.switchTab=saved.switchTab;global.getCurrentPages=saved.pages;}
 };

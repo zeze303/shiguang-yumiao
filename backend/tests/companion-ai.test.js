@@ -38,4 +38,9 @@ test('suggestion workflow takes only latest three, redacts identifiers, preserve
   assert.ok(fallback.status.startsWith(service.FALLBACK.status));
   assert.ok(fallback.cautions.includes(ai.CRISIS_GUIDANCE));
   assert.equal(stored, 1);
+  security.setChecker(async () => ({ allowed: true }));
+  replace(ai, 'generateSuggest', async () => ({ status: '联系138-1234-5678', openers: ['聊聊', '看看'], activities: ['画画', '散步', '折纸'], cautions: ['倾听', '不强迫'] }));
+  const privateOutput = await service.generateSuggest(student, { id: 'v', openid: 'o' });
+  assert.equal(privateOutput.status.includes('138'), false);
+  assert.equal(stored, 1, 'private output must not persist');
 });

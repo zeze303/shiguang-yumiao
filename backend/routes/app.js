@@ -6,8 +6,8 @@ const { maskStudent, maskPhone, maskAddress, maskIdCard } = require('../services
 const router = express.Router();
 const fail = (res, status, message) => res.status(status).json({ success: false, data: null, message });
 const ok = (res, data) => res.json({ success: true, data });
-const PUBLIC_OVERVIEW_MIN_SAMPLES = Number.isInteger(Number(process.env.PUBLIC_OVERVIEW_MIN_SAMPLES)) && Number(process.env.PUBLIC_OVERVIEW_MIN_SAMPLES) >= 2
-  ? Number(process.env.PUBLIC_OVERVIEW_MIN_SAMPLES) : 5;
+const privacy = require('../services/privacy');
+const aiUsage = require('../services/aiUsage');
 
 router.post('/login', async (req, res) => {
   const code = req.body?.code;
@@ -34,32 +34,7 @@ router.post('/login', async (req, res) => {
 router.get('/public/overview', async (req, res) => {
   const students = await db.listStudents({ role: 'admin' });
   const records = await db.listRecords(students.map(student => student.id));
-  const latest = new Map();
-  for (const record of records) if (!latest.has(record.studentId)) latest.set(record.studentId, record);
-  const scored = [...latest.values()].filter(record => {
-    let subscores = record.subscores;
-    if (typeof subscores === 'string') {
-      try { subscores = JSON.parse(subscores); } catch { subscores = null; }
-    }
-    if (scoring.calcFromSubscores(subscores)) return true;
-    return ['psychology', 'aesthetic', 'finance', 'behavior'].every(key => {
-      const value = record[key];
-      return (typeof value === 'number' || (typeof value === 'string' && value.trim() !== '')) && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100;
-    });
-  });
-  const levelCounts = Object.fromEntries(scoring.LEVELS.map(level => [level.label, 0]));
-  for (const record of scored) levelCounts[scoring.getLevel(scoring.calcOverallFromRecord(record)).label]++;
-  // Suppress all score-derived aggregates if the scored cohort or any non-empty grade cell is small.
-  const smallCell = Object.values(levelCounts).some(count => count > 0 && count < PUBLIC_OVERVIEW_MIN_SAMPLES);
-  const suppressed = scored.length < PUBLIC_OVERVIEW_MIN_SAMPLES || smallCell;
-  let averageScores = null;
-  let levelDistribution = null;
-  if (!suppressed) {
-    const dims = scored.map(scoring.extractDims);
-    averageScores = Object.fromEntries(['psychology', 'aesthetic', 'finance', 'behavior'].map(key => [key, Math.round(dims.reduce((sum, value) => sum + value[key], 0) / dims.length)]));
-    levelDistribution = levelCounts;
-  }
-  return ok(res, { studentCount: students.length, schoolCount: new Set(students.map(student => student.school?.trim()).filter(Boolean)).size, recordCount: records.length, averageScores, levelDistribution, suppressed });
+  return ok(res, { studentCount: students.length, schoolCount: new Set(students.map(student => student.school?.trim()).filter(Boolean)).size, recordCount: records.length });
 });
 router.use(appAuth);
 router.post('/redeem', async (req, res) => {
@@ -100,7 +75,8 @@ function safeRecord(record) {
   const fields = ['id', 'studentId', 'period', 'psychology', 'aesthetic', 'finance', 'behavior', 'level', 'subscores', 'createdAt'];
   const dims = scoring.extractDims(record);
   const overall = scoring.calcOverallFromRecord(record);
-  return { ...Object.fromEntries(fields.filter(k => record[k] !== undefined).map(k => [k, record[k]])), ...dims, overall, level: scoring.getLevel(overall).label };
+  const safe = Object.fromEntries(fields.filter(k => !['psychology', 'aesthetic', 'finance', 'behavior', 'level'].includes(k) && record[k] !== undefined).map(k => [k, record[k]]));
+  return { ...safe, ...(dims || Object.fromEntries(Object.keys(scoring.SCOPE).map(key => [key, null]))), overall, level: scoring.getLevel(overall)?.label ?? null };
 }
 function summary(student, latest) {
   const latestRecord = latest ? safeRecord(latest) : null;
@@ -176,7 +152,7 @@ router.post('/companion-logs', async (req, res) => {
 router.post('/ai/suggest', async (req, res) => {
   const student = await accessibleStudent(req, res, req.body?.studentId);
   if (!student) return;
-  return ok(res, await companionAI.generateSuggest(student, req.volunteer));
+  return ok(res, await aiUsage.run(req.volunteer.id, req.get('Idempotency-Key'), { kind: 'suggest', studentId: student.id }, () => companionAI.generateSuggest(student, req.volunteer)));
 });
 router.post('/ai/poem', async (req, res) => {
   if (!validText(req.body?.period, 64)) return fail(res, 400, 'period 必须为非空字符串且不超过64字');
@@ -184,12 +160,29 @@ router.post('/ai/poem', async (req, res) => {
   if (!student) return;
   const checked = await contentSecurity.checkText(req.body.period, req.volunteer.openid);
   if (!checked.allowed) return fail(res, 422, '周期内容未通过审核');
-  return ok(res, await companionAI.generatePoem(student, req.volunteer, req.body.period.trim()));
+  return ok(res, await aiUsage.run(req.volunteer.id, req.get('Idempotency-Key'), { kind: 'poem', studentId: student.id, period: req.body.period.trim() }, () => companionAI.generatePoem(student, req.volunteer, req.body.period.trim())));
 });
 router.get('/poems', async (req, res) => {
   const filters = await listScope(req, res);
   if (!filters) return;
-  return ok(res, (await db.listGrowthPoems(filters)).sort(db.newestFirst));
+  const poems = (await db.listGrowthPoems(filters)).sort(db.newestFirst);
+  const safe = await Promise.all(poems.map(async poem => {
+    const student = await db.findStudent(poem.studentId);
+    const fields = ['id', 'studentId', 'title', 'content', 'period', 'coverUrl', 'createdAt'];
+    const result = Object.fromEntries(fields.filter(key => poem[key] !== undefined).map(key => [key, poem[key]]));
+    const text = { title: result.title, content: result.content, period: result.period };
+    const safeText = privacy.isSafe(text, student || {});
+    if (!safeText) {
+      result.title = '静待成长';
+      result.content = '内容包含隐私，暂不展示。';
+      result.period = '已隐藏';
+      result.coverUrl = require('../services/images').DEFAULT_COVER;
+    }
+    if (result.createdAt && !Number.isFinite(Date.parse(result.createdAt))) result.createdAt = null;
+    if (result.coverUrl !== require('../services/images').DEFAULT_COVER && (!privacy.isSafe(result.coverUrl, student || {}) || !/^https:\/\//.test(result.coverUrl || ''))) result.coverUrl = require('../services/images').DEFAULT_COVER;
+    return result;
+  }));
+  return ok(res, safe);
 });
 
 const admin = express.Router();

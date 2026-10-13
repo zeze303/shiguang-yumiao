@@ -2,7 +2,7 @@ const config = require('../config');
 let loadingCount = 0;
 function failure(message, status, code) { const e = new Error(message); e.status = status; e.code = code; return e; }
 function request(path, options = {}) {
-  const {method = 'GET', data = {}, auth = true, loading = false} = options;
+  const {method = 'GET', data = {}, auth = true, loading = false, headers = {}} = options;
   const token = wx.getStorageSync('shiguang-token');
   const epoch = typeof getApp === 'function' && getApp() ? getApp().globalData.sessionEpoch : 0;
   if (loading && ++loadingCount === 1) wx.showLoading({title: '正在加载', mask: false});
@@ -10,7 +10,7 @@ function request(path, options = {}) {
     const localDev = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(config.baseURL);
     if (!config.baseURL.startsWith('https://') && !localDev) { reject(failure('请配置 HTTPS 接口基址')); return; }
     wx.request({url: (config.baseURL.endsWith('/') ? config.baseURL.slice(0,-1) : config.baseURL) + path, method, data, timeout: config.timeout,
-      header: {'content-type':'application/json', ...(auth && token ? {Authorization:'Bearer ' + token} : {})},
+      header: {...headers, 'content-type':'application/json', ...(auth && token ? {Authorization:'Bearer ' + token} : {})},
       success(res) {
         if (res.statusCode === 401) { reject(failure('登录已过期，请重新登录',401)); return; }
         if (res.statusCode === 403) { reject(failure('当前没有查看权限，结对关系可能已变更',403)); return; }
@@ -26,6 +26,8 @@ function request(path, options = {}) {
   const bounded=new Promise((resolve,reject)=>{timer=setTimeout(()=>reject(failure('请求超时，请手动重试',408)),timeout+100);task.then(resolve,reject);});
   return bounded.then(result => { if (auth && typeof getApp === 'function' && getApp().globalData.sessionEpoch !== epoch) throw failure('会话已变更，请重新加载',401,'STALE_SESSION'); return result; }).catch(async err => {
     if (auth && typeof getApp === 'function' && getApp().globalData.sessionEpoch !== epoch) throw failure('会话已变更，请重新登录',401,'STALE_SESSION');
+    // 同角色刷新也会换token：旧凭证的401只标为过时，不清理当前会话。
+    if (auth && err.status === 401 && wx.getStorageSync('shiguang-token') !== token) throw failure('请求使用的登录凭证已更新',401,'STALE_SESSION');
     if (auth && err.status === 403 && typeof getApp === 'function' && getApp().globalData.session && !getApp().globalData.loggingOut) {
       try { await getApp().refreshRole(); } catch (_) {}
       if(getApp().globalData.sessionEpoch !== epoch) throw failure('身份已变更，已返回对应首页',401,'STALE_SESSION');

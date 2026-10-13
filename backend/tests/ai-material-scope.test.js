@@ -53,7 +53,7 @@ test('AI materials respect own logs during shared pairing and handoff; late cris
   });
   const call = async (kind, token = '2') => {
     const response = await originalFetch(`http://127.0.0.1:${server.address().port}/api/app/ai/${kind}`, {
-      method: 'POST', headers: { Authorization: `Bearer ${token.repeat(64)}`, 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Idempotency-Key': require('node:crypto').randomUUID(), Authorization: `Bearer ${token.repeat(64)}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ studentId: 's', period: '本期' })
     });
     return { status: response.status, body: await response.json() };

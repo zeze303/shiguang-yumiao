@@ -71,11 +71,12 @@ async function generateCover(prompt) {
   if (!process.env.IMAGE_API_KEY || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) return DEFAULT_COVER;
   const base = (process.env.IMAGE_API_BASE || 'https://quanzil.com/v1').replace(/\/$/, '');
   try {
-    const response = await fetch(`${base}/images/generations`, {
+    if (!require('./privacy').isSafe(prompt)) return DEFAULT_COVER;
+    const response = await require('./aiUsage').paidCall(() => fetch(`${base}/images/generations`, {
       method: 'POST', signal: AbortSignal.timeout(60000),
       headers: { Authorization: `Bearer ${process.env.IMAGE_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: MODEL, prompt: `童趣手绘、暖色、与红金体系协调，画面不出现文字或水印。${prompt}`, size: '1024x1024' })
-    });
+    }));
     if (!response.ok) return DEFAULT_COVER;
     const body = await response.json();
     const item = body.data?.[0];

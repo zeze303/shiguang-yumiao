@@ -3,6 +3,7 @@ const ai = require('./ai');
 const security = require('./contentSecurity');
 const images = require('./images');
 const scoring = require('./scoring');
+const privacy = require('./privacy');
 const FALLBACK = {
   status: '本次建议暂不可用，请以孩子的实际表达为准。',
   openers: ['今天想聊些什么？', '你愿意分享最近的一件小事吗？'],
@@ -13,15 +14,7 @@ const FALLBACK = {
 async function allowed(value, volunteer) {
   return (await security.checkText(typeof value === 'string' ? value : JSON.stringify(value), volunteer.openid)).allowed;
 }
-function redact(value, student) {
-  let text = String(value || '');
-  // Exclude known identifying fields and common identifiers before any third-party model call.
-  for (const key of ['name', 'guardian', 'guardianName', 'phone', 'guardianPhone', 'address', 'homeAddress', 'idCard', 'school']) {
-    if (student[key]) text = text.split(String(student[key])).join('已隐藏');
-  }
-  return text.replace(/\b\d{17}[\dXx]\b|\b1\d{10}\b/g, '已隐藏')
-    .replace(/[\p{Script=Han}\d]+(?:村|组|屯|社区|路|街|巷)[\p{Script=Han}\d]*(?:号|栋|室)/gu, '已隐藏');
-}
+function redact(value, student) { return privacy.filterText(value, student); }
 async function contextFor(student, volunteer, period) {
   const logFilters = { studentId: student.id };
   if (volunteer.role !== 'admin') logFilters.volunteerId = volunteer.id;
@@ -37,9 +30,9 @@ async function contextFor(student, volunteer, period) {
   if (!await allowed(materials, volunteer)) throw Object.assign(new Error('记录内容未通过审核'), { status: 422 });
   // Detect risk on complete selected text before redaction/truncation; never infer it from model excerpts.
   const crisis = ai.hasCrisis(materials);
-  const safe = materials.map(row => ({ ...row, content: redact(row.content, student).slice(0, 1500) }));
+  const safe = materials.map(row => privacy.sanitize({ ...row, content: redact(row.content, student).slice(0, 1500) }, student));
   const scores = latest ? scoring.extractDims(latest) : null;
-  return { age: student.age, gender: student.gender, scores, level: latest ? scoring.getLevel(scoring.calcOverallFromRecord(latest)).label : null, materials: safe, crisis };
+  return { age: Number.isInteger(student.age) && student.age >= 0 && student.age <= 18 ? student.age : null, gender: ['男', '女'].includes(student.gender) ? student.gender : null, scores, level: latest ? scoring.getLevel(scoring.calcOverallFromRecord(latest))?.label ?? null : null, materials: safe, crisis };
 }
 async function generateSuggest(student, volunteer) {
   const context = await contextFor(student, volunteer);
@@ -55,12 +48,19 @@ async function generateSuggest(student, volunteer) {
     summaryFailed = true;
     summary = context.materials.slice(0, 3).map(row => row.content.slice(0, 200));
   }
+  summary = privacy.sanitize(summary, student);
   if (!await allowed(summary, volunteer)) return fallback();
-  const history = (await db.listAiSuggestions({ studentId: student.id, kind: 'suggest' })).sort(db.newestFirst).slice(0, 3).map(row => row.content);
+  const history = (await db.listAiSuggestions({ studentId: student.id, kind: 'suggest' })).sort(db.newestFirst).slice(0, 3).map(row => privacy.sanitize(row.content, student));
   let value;
   try {
     value = await ai.generateSuggest({ ...context, recentLogs: summary }, history);
-    if (ai.tooSimilar(value, history)) value = await ai.generateSuggest({ ...context, recentLogs: summary }, history.concat([value]));
+    // Check the intermediate exit before it can become input to another model call.
+    if (!privacy.isSafe(value, student)) return fallback();
+    if (!await allowed(value, volunteer)) return fallback();
+    if (ai.tooSimilar(value, history)) {
+      const safeCandidate = privacy.sanitize(value, student);
+      value = await ai.generateSuggest({ ...context, recentLogs: summary }, history.concat([safeCandidate]));
+    }
   } catch (error) {
     if (summaryFailed) return fallback();
     throw error;
@@ -71,10 +71,12 @@ async function generateSuggest(student, volunteer) {
     if (!value.cautions.includes(ai.CRISIS_GUIDANCE)) value.cautions.push(ai.CRISIS_GUIDANCE);
   }
   if (!await allowed(value, volunteer)) return fallback();
+  if (!privacy.isSafe(value, student)) return fallback();
   await db.createAiSuggestion({ studentId: student.id, volunteerId: volunteer.id, kind: 'suggest', content: value, model: ai.MODEL });
   return value;
 }
 async function generatePoem(student, volunteer, period) {
+  if (!privacy.isSafe(period, student)) throw Object.assign(new Error('周期包含隐私'), { status: 422 });
   const context = await contextFor(student, volunteer, period);
   if (!context.materials.length) throw Object.assign(new Error('暂无可用于写诗的素材，请先添加陪伴记录'), { status: 422, code: 'NO_POEM_MATERIAL' });
   const fallback = () => ({ title: '静待成长', content: '本次成长诗暂不可用，请稍后再试。' + (context.crisis ? ai.CRISIS_GUIDANCE : ''), coverUrl: images.DEFAULT_COVER });
@@ -82,6 +84,7 @@ async function generatePoem(student, volunteer, period) {
   try { value = await ai.generatePoem({ ...context, period }); }
   catch { return fallback(); }
   if (!await allowed(value, volunteer)) return fallback();
+  if (!privacy.isSafe(value, student)) return fallback();
   const poem = await db.createGrowthPoem({ studentId: student.id, createdBy: volunteer.id, period, ...value, coverUrl: images.DEFAULT_COVER });
   // Return text immediately; image work is one-shot per persisted poem. No request awaits it.
   setImmediate(() => images.enqueueCover(poem.id, `${value.title}\n${value.content}`, db.updatePoemCover));

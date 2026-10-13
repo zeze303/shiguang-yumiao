@@ -38,7 +38,7 @@ test('guest restrictions, private-free overview and single-use role upgrades', a
   const overview = await call('/public/overview', token);
   assert.equal(overview.status, 200);
   assert.equal((await call('/public/overview')).status, 200);
-  assert.deepEqual(overview.body.data, { studentCount: 2, schoolCount: 1, recordCount: 2, averageScores: null, levelDistribution: null, suppressed: true });
+  assert.deepEqual(overview.body.data, { studentCount: 2, schoolCount: 1, recordCount: 2 });
   for (const secret of ['私人孩子姓名', '私人学校名称', '13812345678', 'private-id', 'openid']) assert.equal(JSON.stringify(overview.body).includes(secret), false);
   const routes = ['/students', '/students/private-id', '/students/private-id/records', '/companion-logs', '/poems', '/admin/overview', '/admin/invite-codes'];
   for (const route of routes) {

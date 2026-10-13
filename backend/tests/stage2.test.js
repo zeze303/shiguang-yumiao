@@ -63,7 +63,7 @@ test('stage2 permissions, suggestion deduplication, async cover fallback and adm
   });
   const call = async (route, role = 'v', method = 'GET', body) => {
     const response = await originalFetch(`http://127.0.0.1:${server.address().port}/api/app${route}`, {
-      method, headers: { 'Content-Type': 'application/json', ...(role ? { Authorization: `Bearer ${(role === 'a' ? '2' : '1').repeat(64)}` } : {}) },
+      method, headers: { 'Idempotency-Key': require('node:crypto').randomUUID(), 'Content-Type': 'application/json', ...(role ? { Authorization: `Bearer ${(role === 'a' ? '2' : '1').repeat(64)}` } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {})
     });
     return { status: response.status, body: await response.json() };
@@ -127,4 +127,17 @@ test('stage2 permissions, suggestion deduplication, async cover fallback and adm
   assert.equal((await call(`/admin/relations/${pair.body.data.id}`, 'v', 'DELETE')).status, 403);
   assert.equal((await call(`/admin/relations/${pair.body.data.id}`, 'a', 'DELETE')).status, 200);
   assert.equal((await call('/companion-logs?student_id=s2')).status, 403);
+  const invalidState = JSON.parse(await fs.readFile(file, 'utf8'));
+  invalidState.growth_records[0].psychology = null;
+  await fs.writeFile(file, JSON.stringify(invalidState));
+  const detail = await call('/students/s1');
+  assert.equal(detail.status, 200);
+  assert.equal(detail.body.data.overall, null);
+  assert.equal(detail.body.data.level, null);
+  assert.equal(detail.body.data.latestRecord.psychology, null);
+  assert.deepEqual(detail.body.data.warnings, []);
+  const invalidOverview = await call('/admin/overview', 'a');
+  assert.equal(invalidOverview.body.data.averageScore, null);
+  assert.equal(invalidOverview.body.data.unscoredCount, 2);
+  assert.equal((await call('/admin/alerts', 'a')).body.data.length, 0);
 });

@@ -17,6 +17,11 @@ async function accessToken() {
   try { return await tokenRequest; }
   finally { tokenRequest = null; }
 }
+function assertConfiguration() {
+  if (process.env.NODE_ENV === 'production' && (process.env.WX_CONTENT_SECURITY !== 'true' || !process.env.WX_APPID || !process.env.WX_SECRET)) {
+    throw Object.assign(new Error('生产环境必须启用并配置微信内容审核'), { status: 503 });
+  }
+}
 async function wechatChecker({ content, openid }) {
   if (process.env.WX_CONTENT_SECURITY !== 'true' || !process.env.WX_APPID || !process.env.WX_SECRET) return { allowed: true, skipped: true };
   if (!openid) throw Object.assign(new Error('审核缺少用户身份'), { status: 503 });
@@ -39,6 +44,7 @@ async function wechatChecker({ content, openid }) {
 }
 let checker = wechatChecker;
 async function checkText(content, openid) {
+  assertConfiguration();
   if (typeof content !== 'string') throw new TypeError('审核内容必须为字符串');
   // Keep each request below provider text limits; any rejected chunk rejects the whole value.
   const characters = [...content];
@@ -46,6 +52,7 @@ async function checkText(content, openid) {
   for (let offset = 0; offset < Math.max(1, characters.length); offset += 600) {
     const result = await checker({ content: characters.slice(offset, offset + 600).join(''), openid });
     if (!result || result.allowed !== true) return { allowed: false };
+    if (process.env.NODE_ENV === 'production' && result.skipped === true) throw Object.assign(new Error('生产审核不得跳过'), { status: 503 });
     skipped = skipped && result.skipped === true;
   }
   return skipped ? { allowed: true, skipped: true } : { allowed: true };
@@ -55,4 +62,4 @@ function setChecker(customChecker) {
   checker = customChecker;
 }
 function resetChecker() { checker = wechatChecker; cachedToken = null; }
-module.exports = { checkText, setChecker, resetChecker };
+module.exports = { assertConfiguration, checkText, setChecker, resetChecker };
