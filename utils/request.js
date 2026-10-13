@@ -20,8 +20,12 @@ function request(path, options = {}) {
       }, fail(err) { reject(failure(/timeout/.test(err.errMsg || '') ? '暂时未能确认请求结果，请稍后刷新列表' : '连接暂时中断，请检查网络后重试')); }
     });
   });
-  return task.then(result => { if (auth && typeof getApp === 'function' && getApp().globalData.sessionEpoch !== epoch) throw failure('会话已变更，请重新加载',401,'STALE_SESSION'); return result; }).catch(err => {
+  return task.then(result => { if (auth && typeof getApp === 'function' && getApp().globalData.sessionEpoch !== epoch) throw failure('会话已变更，请重新加载',401,'STALE_SESSION'); return result; }).catch(async err => {
     if (auth && typeof getApp === 'function' && getApp().globalData.sessionEpoch !== epoch) throw failure('会话已变更，请重新登录',401,'STALE_SESSION');
+    if (auth && err.status === 403 && typeof getApp === 'function' && getApp().globalData.session && !getApp().globalData.loggingOut) {
+      try { await getApp().refreshRole(); } catch (_) {}
+      if(getApp().globalData.sessionEpoch !== epoch) throw failure('身份已变更，已返回对应首页',401,'STALE_SESSION');
+    }
     if (auth && err.status === 401 && typeof getApp === 'function') getApp().clearSession();
     throw err;
   }).finally(() => { if (loading && --loadingCount === 0) wx.hideLoading(); });

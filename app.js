@@ -3,11 +3,23 @@ const request = require('./utils/request');
 App({
   globalData: {role:null,profile:null,session:null,revision:0,sessionEpoch:0,logDraft:null,loginRequired:false,loggingOut:false},
   onLaunch() { this.ensureSession().catch(() => {}); },
-  ensureSession() {
+  onShow() {
+    if(this.globalData.session && !this.globalData.loginRequired && !this.globalData.loggingOut) this.refreshRole().catch(()=>{});
+  },
+  async refreshRole() {
+    const epoch=this.globalData.sessionEpoch;
+    try { return await this.ensureSession(true); }
+    catch(error) {
+      if(epoch===this.globalData.sessionEpoch && [401,403].includes(error.status) && error.code!=='STALE_SESSION') this.clearSession();
+      throw error;
+    }
+  },
+  ensureSession(refresh=false) {
     if (this.globalData.loggingOut) return Promise.reject(new Error('正在退出登录，请稍候'));
-    if (this.globalData.session) return Promise.resolve(this.globalData.session);
+    if (this.globalData.session && !refresh) return Promise.resolve(this.globalData.session);
     if (this.loginTask) return this.loginTask;
     const epoch=this.globalData.sessionEpoch;
+    const previousRole=this.globalData.role;
     const task=(config.useMock ? Promise.resolve('mock-code') : new Promise((resolve,reject)=>wx.login({success:r=>r.code?resolve(r.code):reject(new Error('微信登录未取得凭证，请重试')),fail:reject})))
       .then(code => {
         if(epoch!==this.globalData.sessionEpoch) throw Object.assign(new Error('登录已取消，请重新登录'),{status:401,code:'STALE_SESSION'});
@@ -20,6 +32,11 @@ App({
         wx.setStorageSync('shiguang-token',session.token);
         this.globalData.session=session;this.globalData.role=session.role;this.globalData.profile=session.profile;
         this.globalData.loginRequired=false;
+        if(previousRole && previousRole!==session.role){
+          this.globalData.sessionEpoch++;this.globalData.revision++;this.globalData.logDraft=null;
+          require('./utils/page').clearAccountPages('身份已更新，正在返回对应首页');
+          require('./utils/page').enter(session.role);
+        }
         return session;
       }).finally(()=>{if(this.loginTask===task)this.loginTask=null;});
     this.loginTask=task;
@@ -31,6 +48,7 @@ App({
     require('./utils/page').clearAccountPages('身份已更新，正在进入服务');
     this.globalData.sessionEpoch++;this.globalData.revision++;this.globalData.logDraft=null;
     this.globalData.role=role;this.globalData.session={...this.globalData.session,role};
+    require('./utils/page').enter(role);
   },
   async logout() {
     if(this.logoutTask)return this.logoutTask;
@@ -54,5 +72,6 @@ App({
     this.globalData.loginRequired=true;this.loginTask=null;
     require('./utils/page').clearAccountPages('登录已过期，请重新登录');
     require('./mock/index').reset();
+    require('./utils/page').toGuest();
   }
 });
