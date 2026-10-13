@@ -1,0 +1,58 @@
+{
+  "pages": [
+    "pages/bindings/index",
+    "pages/poems/index",
+    "pages/logs/index",
+    "pages/profile/index",
+    "pages/overview/index",
+    "pages/students/index",
+    "pages/volunteers/index",
+    "pages/child-detail/index",
+    "pages/advice/index",
+    "pages/poem-detail/index",
+    "pages/poem-generate/index",
+    "pages/poem-share/index",
+    "pages/log-create/index",
+    "pages/log-detail/index",
+    "pages/pairing/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "拾光育苗",
+    "navigationBarBackgroundColor": "#fdf8f0",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f5f0eb",
+    "backgroundTextStyle": "dark",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#6c5d56",
+    "selectedColor": "#c0392b",
+    "backgroundColor": "#fdf8f0",
+    "list": [
+      {
+        "pagePath": "pages/bindings/index",
+        "text": "我的结对"
+      },
+      {
+        "pagePath": "pages/poems/index",
+        "text": "成长诗"
+      },
+      {
+        "pagePath": "pages/logs/index",
+        "text": "记录"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的"
+      }
+    ]
+  },
+  "usingComponents": {
+    "state-view": "/components/state-view/index",
+    "child-card": "/components/child-card/index",
+    "role-tabs": "/custom-tab-bar/index"
+  },
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

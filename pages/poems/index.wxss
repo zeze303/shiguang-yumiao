@@ -1,0 +1,1 @@
+.generate{margin:32rpx 0 40rpx}.poem-item{width:100%;text-align:left}.poem-content{padding:32rpx}.list-title{font-size:42rpx;line-height:60rpx}.excerpt{font-size:26rpx;line-height:46rpx;margin:16rpx 0 24rpx;color:var(--text-secondary)}

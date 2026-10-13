@@ -1,0 +1,1 @@
+Component({options:{styleIsolation:'apply-shared'},properties:{student:Object,admin:Boolean},methods:{open(){this.triggerEvent('open',{id:this.data.student.id});}}});

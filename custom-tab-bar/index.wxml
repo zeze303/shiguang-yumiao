@@ -1,0 +1,1 @@
+<view class="tabbar"><button wx:for="{{items}}" wx:key="name" class="tab {{selected === item.url ? 'selected' : ''}}" data-url="{{item.url}}" bindtap="change" aria-label="{{item.text}}"><image src="/assets/icons/{{item.icon}}{{selected === item.url ? '-active' : ''}}.svg"/><text>{{item.text}}</text></button></view>

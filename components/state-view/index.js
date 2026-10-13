@@ -1,0 +1,1 @@
+Component({options:{styleIsolation:'apply-shared'},properties:{status:{type:String,value:'ready'},title:String,message:String,actionText:{type:String,value:'重试'}},data:{rows:[1,2,3]},methods:{retry(){this.triggerEvent('retry');},action(){this.triggerEvent('action');}}});
