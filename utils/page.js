@@ -13,10 +13,17 @@ function clearAccountPages(message) {
   const pages=typeof getCurrentPages==='function'?getCurrentPages():[];
   pages.forEach(page=>clearPage(page,message));
 }
-function toGuest() {
+let navigationLock={url:'',epoch:-1,at:0};
+function navigateHome(role){
+  const url=home(role),now=Date.now(),epoch=getApp().globalData.sessionEpoch;
   const pages=typeof getCurrentPages==='function'?getCurrentPages():[];
-  if(pages.length && pages[pages.length-1].route!=='pages/guest/index')wx.reLaunch({url:'/pages/guest/index'});
+  if(!pages.length || '/'+pages[pages.length-1].route===url)return false;
+  if(navigationLock.url===url&&navigationLock.epoch===epoch&&now-navigationLock.at<1000)return false;
+  navigationLock={url,epoch,at:now};
+  (['volunteer','admin'].includes(role)?wx.switchTab:wx.reLaunch)({url,fail:()=>{if(navigationLock.url===url&&navigationLock.epoch===epoch)navigationLock={url:'',epoch:-1,at:0};}});
+  return true;
 }
+function toGuest(){return navigateHome('guest');}
 function authError(page,err) {
   if(!err || ![401,403].includes(err.status))return false;
   if(err.code==='STALE_SESSION'){return true;}
@@ -32,14 +39,14 @@ async function guard(page,roles=['volunteer','admin']) {
   if(app.globalData.loginRequired){clearPage(page,'请重新登录后查看授权范围的数据');toGuest();return false;}
   try {
     const session=await app.ensureSession();
-    if(!roles.includes(session.role)){clearPage(page,'当前身份没有访问权限');(session.role==='guest'?wx.reLaunch:wx.switchTab)({url:home(session.role)});return false;}
+    if(!roles.includes(session.role)){if(page._guardRedirecting)return false;page._guardRedirecting=true;clearPage(page,'当前身份没有访问权限');navigateHome(session.role);return false;}
     const accountKey=session.profile && session.profile.id;
     if((page.accountKey!==undefined && page.accountKey!==accountKey) || (page.sessionEpoch!==undefined && page.sessionEpoch!==app.globalData.sessionEpoch))clearPage(page,'');
-    page.sessionEpoch=app.globalData.sessionEpoch;page.accountKey=accountKey;page.setData({role:session.role,profile:session.profile});syncTab(page);return true;
+    page._guardRedirecting=false;page.sessionEpoch=app.globalData.sessionEpoch;page.accountKey=accountKey;page.setData({role:session.role,profile:session.profile});syncTab(page);return true;
   }catch(err){if(!authError(page,err))page.setData({status:'error',error:errorMessage(err)});return false;}
 }
-function enter(role) { (['volunteer','admin'].includes(role)?wx.switchTab:wx.reLaunch)({url:home(role)}); }
-function syncTab(page) {const tab=page.getTabBar && page.getTabBar();if(tab)tab.sync();const inline=page.selectComponent && page.selectComponent('role-tabs');if(inline)inline.sync();}
+function enter(role){return navigateHome(role);}
+function syncTab(page){try{const tab=page.getTabBar&&page.getTabBar();if(tab&&typeof tab.sync==='function')tab.sync();}catch(_){}try{const inline=page.selectComponent&&page.selectComponent('role-tabs');if(inline&&typeof inline.sync==='function')inline.sync();}catch(_){} }
 function navigate(name,params={}) {wx.navigateTo({url:'/pages/'+name+'/index?'+Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&')});}
 function info(title,content) {wx.showModal({title,content,showCancel:false,confirmText:'知道了'});}
 module.exports={guard,syncTab,errorMessage,navigate,info,home,enter,authError,clearPage,clearAccountPages,temporaryError,toGuest};

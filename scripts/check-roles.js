@@ -1,7 +1,7 @@
 const assert=require('assert');
 module.exports=async function checkRoles(){
- const config=require('../config'),api=require('../utils/api'),ui=require('../utils/page'),app=getApp();const original={...config},oldSwitch=wx.switchTab,oldLaunch=wx.reLaunch,oldRequest=wx.request;
- let destinations=[];wx.switchTab=o=>destinations.push(o.url);wx.reLaunch=o=>destinations.push(o.url);
+ const config=require('../config'),api=require('../utils/api'),ui=require('../utils/page'),app=getApp();const original={...config},oldSwitch=wx.switchTab,oldLaunch=wx.reLaunch,oldRequest=wx.request,oldPages=global.getCurrentPages;
+ let destinations=[];global.getCurrentPages=()=>[{route:'pages/invite-codes/index'}];wx.switchTab=o=>destinations.push(o.url);wx.reLaunch=o=>destinations.push(o.url);
  try{
   app.clearSession();config.useMock=true;config.mockRole='guest';config.mockDelay=0;config.mockState='normal';
   const session=await app.ensureSession();assert.equal(session.role,'guest');
@@ -16,5 +16,5 @@ module.exports=async function checkRoles(){
   wx.request=opts=>{seen=opts;opts.success({statusCode:200,data:{success:true,data:{studentCount:0,schoolCount:0,recordCount:0,averageScores:{psychology:80},levelDistribution:{优秀:1},suppressed:true}}});};const hidden=await api.publicOverview();assert.equal(seen.header.Authorization,undefined);assert.equal(hidden.average_scores,null);assert.equal(hidden.level_distribution,null);
   wx.request=opts=>{seen=opts;opts.success({statusCode:200,data:{success:true,data:{id:'c1',code:'ABCD',targetRole:'volunteer',createdAt:'2026-10-01',expiresAt:null,usedAt:null,status:'active'}}});};const real=await api.createInviteCode({targetRole:'volunteer'});assert.equal(seen.method,'POST');assert.equal(seen.data.targetRole,'volunteer');assert.equal(real.target_role,'volunteer');assert.equal(real.created_at,'2026-10-01');await api.revokeInviteCode('c1');assert(seen.url.endsWith('/admin/invite-codes/c1/revoke'));
   console.log('PASS: guest公开脱敏/评分抑制/业务拦截、邀请码无效过期已用同级、认证升级与导航、admin生成列表作废、camelCase邀请码适配');
- }finally{Object.assign(config,original);wx.switchTab=oldSwitch;wx.reLaunch=oldLaunch;wx.request=oldRequest;app.clearSession();}
+ }finally{Object.assign(config,original);wx.switchTab=oldSwitch;wx.reLaunch=oldLaunch;wx.request=oldRequest;global.getCurrentPages=oldPages;app.clearSession();}
 };

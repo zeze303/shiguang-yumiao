@@ -20,7 +20,11 @@ function request(path, options = {}) {
       }, fail(err) { reject(failure(/timeout/.test(err.errMsg || '') ? '暂时未能确认请求结果，请稍后刷新列表' : '连接暂时中断，请检查网络后重试')); }
     });
   });
-  return task.then(result => { if (auth && typeof getApp === 'function' && getApp().globalData.sessionEpoch !== epoch) throw failure('会话已变更，请重新加载',401,'STALE_SESSION'); return result; }).catch(async err => {
+  // 原生timeout之外的兜底：即使运行时遗漏回调，也让页面进入错误态。
+  const timeout=Number.isFinite(config.timeout)&&config.timeout>0?config.timeout:30000;
+  let timer;
+  const bounded=new Promise((resolve,reject)=>{timer=setTimeout(()=>reject(failure('请求超时，请手动重试',408)),timeout+100);task.then(resolve,reject);});
+  return bounded.then(result => { if (auth && typeof getApp === 'function' && getApp().globalData.sessionEpoch !== epoch) throw failure('会话已变更，请重新加载',401,'STALE_SESSION'); return result; }).catch(async err => {
     if (auth && typeof getApp === 'function' && getApp().globalData.sessionEpoch !== epoch) throw failure('会话已变更，请重新登录',401,'STALE_SESSION');
     if (auth && err.status === 403 && typeof getApp === 'function' && getApp().globalData.session && !getApp().globalData.loggingOut) {
       try { await getApp().refreshRole(); } catch (_) {}
@@ -28,6 +32,6 @@ function request(path, options = {}) {
     }
     if (auth && err.status === 401 && typeof getApp === 'function') getApp().clearSession();
     throw err;
-  }).finally(() => { if (loading && --loadingCount === 0) wx.hideLoading(); });
+  }).finally(() => { clearTimeout(timer);if (loading && --loadingCount === 0) wx.hideLoading(); });
 }
 module.exports = request;

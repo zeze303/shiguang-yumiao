@@ -3,7 +3,10 @@ const request = require('./utils/request');
 App({
   globalData: {role:null,profile:null,session:null,revision:0,sessionEpoch:0,logDraft:null,loginRequired:false,loggingOut:false},
   onLaunch() { this.ensureSession().catch(() => {}); },
+  onHide() { this.wasHidden=true; },
   onShow() {
+    if(!this.wasHidden)return;
+    this.wasHidden=false;
     if(this.globalData.session && !this.globalData.loginRequired && !this.globalData.loggingOut) this.refreshRole().catch(()=>{});
   },
   async refreshRole() {
@@ -16,11 +19,12 @@ App({
   },
   ensureSession(refresh=false) {
     if (this.globalData.loggingOut) return Promise.reject(new Error('正在退出登录，请稍候'));
-    if (this.globalData.session && !refresh) return Promise.resolve(this.globalData.session);
+    // 先等待在途登录/角色刷新，防止页面守卫拿到过期缓存角色。
     if (this.loginTask) return this.loginTask;
+    if (this.globalData.session && !refresh) return Promise.resolve(this.globalData.session);
     const epoch=this.globalData.sessionEpoch;
     const previousRole=this.globalData.role;
-    const task=(config.useMock ? Promise.resolve('mock-code') : new Promise((resolve,reject)=>wx.login({success:r=>r.code?resolve(r.code):reject(new Error('微信登录未取得凭证，请重试')),fail:reject})))
+    const task=(config.useMock ? Promise.resolve('mock-code') : new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('微信登录超时，请重试')),10000);try{wx.login({timeout:10000,success:r=>{clearTimeout(timer);r.code?resolve(r.code):reject(new Error('微信登录未取得凭证，请重试'));},fail:e=>{clearTimeout(timer);reject(e);}});}catch(e){clearTimeout(timer);reject(e);}}))
       .then(code => {
         if(epoch!==this.globalData.sessionEpoch) throw Object.assign(new Error('登录已取消，请重新登录'),{status:401,code:'STALE_SESSION'});
         return request('/login',{method:'POST',data:{code},auth:false});
