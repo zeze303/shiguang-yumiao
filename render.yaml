@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: shiguang-yumiao-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: WX_APPID
+        sync: false
+      - key: WX_SECRET
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: IMAGE_API_KEY
+        sync: false
+      - key: IMAGE_API_BASE
+        value: https://quanzil.com/v1
+      - key: IMAGE_MODEL
+        value: gpt-image-2
+      - key: WX_CONTENT_SECURITY
+        value: "false"
