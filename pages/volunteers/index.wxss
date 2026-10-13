@@ -1,1 +1,5 @@
-.volunteer{width:100%;display:block;text-align:left}
+.volunteer {
+  width: 100%;
+  display: block;
+  text-align: left;
+}

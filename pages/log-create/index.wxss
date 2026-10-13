@@ -1,1 +1,80 @@
-.content{height:348rpx;min-height:348rpx;line-height:48rpx}.choice-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20rpx}.choice{min-height:96rpx;border:2rpx solid var(--border-default);border-radius:24rpx;background:var(--surface-paper);font-size:26rpx;display:flex;align-items:center;justify-content:center;gap:16rpx;padding:24rpx}.choice.active{border-color:var(--brand-primary);background:var(--tint-red);color:var(--brand-deep)}.upload-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20rpx}.upload-thumb{height:184rpx;position:relative;overflow:hidden;border-radius:24rpx}.upload-thumb>image{width:100%;height:100%}.remove{position:absolute;top:0;right:0;width:88rpx;height:88rpx;display:flex;align-items:center;justify-content:center;background:var(--surface-paper);border-radius:0 0 0 20rpx}.remove image{width:32rpx;height:32rpx}.upload{height:184rpx;border:2rpx dashed rgba(44,24,16,.22);border-radius:24rpx;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12rpx;font-size:22rpx;background:var(--surface-paper);color:var(--text-secondary)}
+.content {
+  height: 348rpx;
+  min-height: 348rpx;
+  line-height: 48rpx;
+}
+
+.choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 20rpx;
+}
+
+.choice {
+  min-height: 96rpx;
+  border: 2rpx solid var(--border-default);
+  border-radius: 24rpx;
+  background: var(--surface-paper);
+  font-size: 26rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  padding: 24rpx;
+}
+
+.choice.active {
+  border-color: var(--brand-primary);
+  background: var(--tint-red);
+  color: var(--brand-deep);
+}
+
+.upload-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 20rpx;
+}
+
+.upload-thumb {
+  height: 184rpx;
+  position: relative;
+  overflow: hidden;
+  border-radius: 24rpx;
+}
+
+.upload-thumb>image {
+  width: 100%;
+  height: 100%;
+}
+
+.remove {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 88rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-paper);
+  border-radius: 0 0 0 20rpx;
+}
+
+.remove image {
+  width: 32rpx;
+  height: 32rpx;
+}
+
+.upload {
+  height: 184rpx;
+  border: 2rpx dashed rgba(44,24,16,.22);
+  border-radius: 24rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  font-size: 22rpx;
+  background: var(--surface-paper);
+  color: var(--text-secondary);
+}

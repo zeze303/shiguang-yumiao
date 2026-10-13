@@ -1,2 +1,72 @@
-<view class="page with-action"><state-view status="{{status}}" title="{{status==='empty'?'诗文暂时不可用':''}}" message="{{error || '请返回成长诗列表查看。'}}" actionText="{{status==='empty'?'返回列表':'重试'}}" bind:retry="load" bind:action="back"/><block wx:if="{{status==='ready'}}"><view class="card poem-paper"><image class="poem-cover reading-cover" src="{{poem.cover_url || '/assets/landscape.svg'}}" mode="aspectFill" binderror="coverError"/><view class="poem-reading"><view class="row between"><text class="small">写给{{poem.student_name || '正在长大的你'}} · {{poem.period}}</text><view class="tag ai">AI 生成</view></view><view class="poem-title">{{poem.title}}</view><view class="verse">{{poem.content}}</view><view class="signature">这首诗，来自观察与陪伴留下的足迹。
-诗文由 AI 生成，{{poem.cover_url?'封面由接口提供':'封面为本地品牌插画'}}。</view></view></view><view class="notice"><image class="icon" src="/assets/icons/shield.svg"/><text>分享卡默认隐藏昵称；不包含学校、成长分数或陪伴照片。</text></view></block><view wx:if="{{status==='ready'}}" class="bottom-action"><button class="btn secondary" bindtap="generate">再写一首</button><button class="btn" bindtap="share">分享这首诗</button></view></view>
+<view
+  class="page with-action"
+>
+  <state-view
+    status="{{status}}"
+    title="{{status==='empty'?'诗文暂时不可用':''}}"
+    message="{{error || '请返回成长诗列表查看。'}}"
+    actionText="{{status==='empty'?'返回列表':'重试'}}"
+    bind:retry="load"
+    bind:action="back"
+  />
+  <block
+    wx:if="{{status==='ready'}}"
+  >
+    <view
+      class="card poem-paper"
+    >
+      <image
+        class="poem-cover reading-cover"
+        src="{{poem.cover_url || '/assets/landscape.svg'}}"
+        mode="aspectFill"
+        binderror="coverError"
+      />
+      <view
+        class="poem-reading"
+      >
+        <view
+          class="row between"
+        >
+          <text
+            class="small"
+          >写给{{poem.student_name || '正在长大的你'}} · {{poem.period}}</text>
+          <view
+            class="tag ai"
+          >AI 生成</view>
+        </view>
+        <view
+          class="poem-title"
+        >{{poem.title}}</view>
+        <view
+          class="verse"
+        >{{poem.content}}</view>
+        <view
+          class="signature"
+        >这首诗，来自观察与陪伴留下的足迹。
+诗文由 AI 生成，{{poem.cover_url?'封面由接口提供':'封面为本地品牌插画'}}。</view>
+      </view>
+    </view>
+    <view
+      class="notice"
+    >
+      <image
+        class="icon"
+        src="/assets/icons/shield.svg"
+      />
+      <text>分享卡默认隐藏昵称；不包含学校、成长分数或陪伴照片。</text>
+    </view>
+  </block>
+  <view
+    wx:if="{{status==='ready'}}"
+    class="bottom-action"
+  >
+    <button
+      class="btn secondary"
+      bindtap="generate"
+    >再写一首</button>
+    <button
+      class="btn"
+      bindtap="share"
+    >分享这首诗</button>
+  </view>
+</view>

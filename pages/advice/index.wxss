@@ -1,1 +1,29 @@
-.quote{font-size:32rpx;line-height:56rpx;padding:32rpx;border-left:6rpx solid var(--accent-gold);background:var(--tint-gold);border-radius:0 20rpx 20rpx 0}.activity{display:flex;gap:24rpx;padding:24rpx 0;border-bottom:2rpx solid var(--border-default);font-size:28rpx;line-height:48rpx}.step-num{width:52rpx;height:52rpx;display:flex;align-items:center;justify-content:center;background:var(--tint-gold);border-radius:16rpx;color:var(--brand-deep);flex:none}
+.quote {
+  font-size: 32rpx;
+  line-height: 56rpx;
+  padding: 32rpx;
+  border-left: 6rpx solid var(--accent-gold);
+  background: var(--tint-gold);
+  border-radius: 0 20rpx 20rpx 0;
+}
+
+.activity {
+  display: flex;
+  gap: 24rpx;
+  padding: 24rpx 0;
+  border-bottom: 2rpx solid var(--border-default);
+  font-size: 28rpx;
+  line-height: 48rpx;
+}
+
+.step-num {
+  width: 52rpx;
+  height: 52rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tint-gold);
+  border-radius: 16rpx;
+  color: var(--brand-deep);
+  flex: none;
+}

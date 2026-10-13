@@ -1,2 +1,107 @@
-<view class="page with-action"><view class="title">拾起这一段成长</view><view class="subtitle">让真实的观察与陪伴，成为诗里的光。</view><state-view status="{{status}}" title="还需要成长的线索" message="{{error || '暂无可用对象，请联系管理者。'}}" bind:retry="load" bind:action="help"/><block wx:if="{{status==='ready'}}"><view class="field section"><view class="label">写给哪位孩子</view><picker range="{{children}}" range-key="name" value="{{childIndex}}" bindchange="child" disabled="{{busy}}"><view class="input">{{children[childIndex].name}} · {{children[childIndex].grade}}</view></picker></view><view class="field"><view class="label">成长周期</view><picker range="{{periods}}" value="{{periodIndex}}" bindchange="period" disabled="{{busy || !periods.length}}"><view class="input">{{periods[periodIndex] || '暂无有观察的周期'}}</view></picker><view class="field-hint">仅展示有有效成长观察的周期。</view></view><state-view wx:if="{{periodBusy}}" status="loading"/><view wx:if="{{basis}}" class="card"><view class="section-title">本次诗歌的依据</view><view class="basis small">{{children[childIndex].name}} · {{basis.period}}
-心理 {{basis.psychology}} / 美育 {{basis.aesthetic}} / 财商 {{basis.finance}} / 行为 {{basis.behavior}}</view></view><view wx:else class="notice">还需要一点成长的线索，请联系管理者补齐观察。</view><view class="notice">生成的诗歌会保存到成长诗列表，可在阅读后预览匿名分享卡。封面缺失不影响诗文阅读。</view><view wx:if="{{error}}" class="error-inline">{{error}}<button class="text-btn" bindtap="loadPeriods">刷新成长周期</button></view><button wx:if="{{uncertain && !busy}}" class="btn secondary full" bindtap="list">查看已生成诗列表</button><view wx:if="{{busy}}" class="notice">正在拾起成长的片段。没有后台任务查询能力，离开后请到列表确认结果。</view></block><view class="bottom-action"><button class="btn" disabled="{{status!=='ready' || busy || !basis || periodBusy}}" bindtap="submit">{{busy?'正在生成诗文':error?'重试本次生成':'生成成长诗'}}</button></view></view>
+<view
+  class="page with-action"
+>
+  <view
+    class="title"
+  >拾起这一段成长</view>
+  <view
+    class="subtitle"
+  >让真实的观察与陪伴，成为诗里的光。</view>
+  <state-view
+    status="{{status}}"
+    title="还需要成长的线索"
+    message="{{error || '暂无可用对象，请联系管理者。'}}"
+    bind:retry="load"
+    bind:action="help"
+  />
+  <block
+    wx:if="{{status==='ready'}}"
+  >
+    <view
+      class="field section"
+    >
+      <view
+        class="label"
+      >写给哪位孩子</view>
+      <picker
+        range="{{children}}"
+        range-key="name"
+        value="{{childIndex}}"
+        bindchange="child"
+        disabled="{{busy}}"
+      >
+        <view
+          class="input"
+        >{{children[childIndex].name}} · {{children[childIndex].grade}}</view>
+      </picker>
+    </view>
+    <view
+      class="field"
+    >
+      <view
+        class="label"
+      >成长周期</view>
+      <picker
+        range="{{periods}}"
+        value="{{periodIndex}}"
+        bindchange="period"
+        disabled="{{busy || !periods.length}}"
+      >
+        <view
+          class="input"
+        >{{periods[periodIndex] || '暂无有观察的周期'}}</view>
+      </picker>
+      <view
+        class="field-hint"
+      >仅展示有有效成长观察的周期。</view>
+    </view>
+    <state-view
+      wx:if="{{periodBusy}}"
+      status="loading"
+    />
+    <view
+      wx:if="{{basis}}"
+      class="card"
+    >
+      <view
+        class="section-title"
+      >本次诗歌的依据</view>
+      <view
+        class="basis small"
+      >{{children[childIndex].name}} · {{basis.period}}
+心理 {{basis.psychology}} / 美育 {{basis.aesthetic}} / 财商 {{basis.finance}} / 行为 {{basis.behavior}}</view>
+    </view>
+    <view
+      wx:else
+      class="notice"
+    >还需要一点成长的线索，请联系管理者补齐观察。</view>
+    <view
+      class="notice"
+    >生成的诗歌会保存到成长诗列表，可在阅读后预览匿名分享卡。封面缺失不影响诗文阅读。</view>
+    <view
+      wx:if="{{error}}"
+      class="error-inline"
+    >{{error}}<button
+        class="text-btn"
+        bindtap="loadPeriods"
+      >刷新成长周期</button></view>
+    <button
+      wx:if="{{uncertain && !busy}}"
+      class="btn secondary full"
+      bindtap="list"
+    >查看已生成诗列表</button>
+    <view
+      wx:if="{{busy}}"
+      class="notice"
+    >正在拾起成长的片段。没有后台任务查询能力，离开后请到列表确认结果。</view>
+  </block>
+  <view
+    class="bottom-action"
+  >
+    <button
+      class="btn"
+      disabled="{{status!=='ready' || busy || !basis || periodBusy}}"
+      bindtap="submit"
+    >{{busy?'正在生成诗文':error?'重试本次生成':'生成成长诗'}}</button>
+  </view>
+</view>

@@ -1,1 +1,66 @@
-<view class="page"><view class="eyebrow">服务身份认证</view><view class="title section">开启下一段陪伴</view><view class="subtitle">输入项目组织提供的邀请码，进入授权服务范围。</view><state-view status="{{status}}" message="{{error}}" bind:retry="load"/><block wx:if="{{status==='ready'}}"><view class="notice"><image class="icon" src="/assets/icons/shield.svg"/><text>当前身份：{{role==='admin'?'管理员':role==='volunteer'?'志愿者':'游客'}}。身份只能由服务器认证，邀请码只能使用一次。</text></view><view class="field section"><view class="label">邀请码</view><input class="input code-input" value="{{code}}" maxlength="128" placeholder="输入邀请码" bindinput="input" disabled="{{busy}}"/><view class="field-hint">保留组织提供的连字符，前后空格会自动去除。</view></view><view wx:if="{{error}}" class="error-inline">{{error}}</view><button class="btn full" disabled="{{busy}}" bindtap="submit">{{busy?'正在认证':'确认认证'}}</button><button class="text-btn" bindtap="help">如何获取邀请码</button><view wx:if="{{!code}}" class="small section">尚未填写邀请码，请向组织管理者申请。</view></block></view>
+<view
+  class="page"
+>
+  <view
+    class="eyebrow"
+  >服务身份认证</view>
+  <view
+    class="title section"
+  >开启下一段陪伴</view>
+  <view
+    class="subtitle"
+  >输入项目组织提供的邀请码，进入授权服务范围。</view>
+  <state-view
+    status="{{status}}"
+    message="{{error}}"
+    bind:retry="load"
+  />
+  <block
+    wx:if="{{status==='ready'}}"
+  >
+    <view
+      class="notice"
+    >
+      <image
+        class="icon"
+        src="/assets/icons/shield.svg"
+      />
+      <text>当前身份：{{role==='admin'?'管理员':role==='volunteer'?'志愿者':'游客'}}。身份只能由服务器认证，邀请码只能使用一次。</text>
+    </view>
+    <view
+      class="field section"
+    >
+      <view
+        class="label"
+      >邀请码</view>
+      <input
+        class="input code-input"
+        value="{{code}}"
+        maxlength="128"
+        placeholder="输入邀请码"
+        bindinput="input"
+        disabled="{{busy}}"
+      />
+      <view
+        class="field-hint"
+      >保留组织提供的连字符，前后空格会自动去除。</view>
+    </view>
+    <view
+      wx:if="{{error}}"
+      class="error-inline"
+    >{{error}}</view>
+    <button
+      class="btn full"
+      disabled="{{busy}}"
+      bindtap="submit"
+    >{{busy?'正在认证':'确认认证'}}</button>
+    <button
+      class="text-btn"
+      bindtap="help"
+    >如何获取邀请码</button>
+    <view
+      wx:if="{{!code}}"
+      class="small section"
+    >尚未填写邀请码，请向组织管理者申请。</view>
+  </block>
+</view>

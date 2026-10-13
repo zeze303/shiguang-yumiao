@@ -1,3 +1,117 @@
-<view class="page tab-page"><view class="row between intro"><view class="grow"><view class="eyebrow">拾光育苗 / 陪伴手册</view><view class="title">{{profile.name || '你'}}，陪伴从这里开始</view><view class="subtitle">你正陪伴 {{items.length}} 位孩子，慢慢生长，一起向光。</view></view><view class="seal">拾光
-育苗</view></view><view wx:if="{{items.length}}" class="hero"><image class="art" src="/assets/landscape.svg" mode="aspectFill"/><view class="eyebrow">今日陪伴灵感</view><view class="hero-title serif">先听一听，
-孩子眼里的秋天。</view><button class="text-btn" bindtap="inspire">看看开场话术 <image class="icon small-icon" src="/assets/icons/arrow.svg"/></button></view><view class="section-head"><view class="section-title">我的结对</view><text class="small">{{items.length}} 位孩子</text></view><view class="chips"><button class="chip-wrap" data-filter="all" bindtap="filter"><view class="chip {{filter === 'all' ? 'active' : ''}}">全部</view></button><button class="chip-wrap" data-filter="urgent" bindtap="filter"><view class="chip {{filter === 'urgent' ? 'active' : ''}}">需跟进 {{urgentCount}}</view></button></view><view wx:if="{{error && status === 'ready'}}" class="error-inline">{{error}}<button class="text-btn" bindtap="load">重试</button></view><state-view status="{{status}}" message="{{error || '结对后，这里将记录你们一起成长的足迹。'}}" title="{{status === 'empty' ? '还没有结对的孩子' : ''}}" actionText="{{status === 'empty' ? '了解结对' : '重试'}}" bind:retry="load" bind:action="help"/><block wx:if="{{status === 'ready'}}"><child-card wx:for="{{filtered}}" wx:key="id" student="{{item}}" bind:open="open"/><state-view wx:if="{{!filtered.length}}" status="empty" title="没有找到匹配内容" message="当前没有需要跟进的孩子。" actionText="清除筛选" bind:action="clear"/><view class="version">已展示全部结对孩子 · 数据仅在授权范围内可见</view></block></view>
+<view
+  class="page tab-page"
+>
+  <view
+    class="row between intro"
+  >
+    <view
+      class="grow"
+    >
+      <view
+        class="eyebrow"
+      >拾光育苗 / 陪伴手册</view>
+      <view
+        class="title"
+      >{{profile.name || '你'}}，陪伴从这里开始</view>
+      <view
+        class="subtitle"
+      >你正陪伴 {{items.length}} 位孩子，慢慢生长，一起向光。</view>
+    </view>
+    <view
+      class="seal"
+    >拾光
+育苗</view>
+  </view>
+  <view
+    wx:if="{{items.length}}"
+    class="hero"
+  >
+    <image
+      class="art"
+      src="/assets/landscape.svg"
+      mode="aspectFill"
+    />
+    <view
+      class="eyebrow"
+    >今日陪伴灵感</view>
+    <view
+      class="hero-title serif"
+    >先听一听，
+孩子眼里的秋天。</view>
+    <button
+      class="text-btn"
+      bindtap="inspire"
+    >看看开场话术 <image
+        class="icon small-icon"
+        src="/assets/icons/arrow.svg"
+      /></button>
+  </view>
+  <view
+    class="section-head"
+  >
+    <view
+      class="section-title"
+    >我的结对</view>
+    <text
+      class="small"
+    >{{items.length}} 位孩子</text>
+  </view>
+  <view
+    class="chips"
+  >
+    <button
+      class="chip-wrap"
+      data-filter="all"
+      bindtap="filter"
+    >
+      <view
+        class="chip {{filter === 'all' ? 'active' : ''}}"
+      >全部</view>
+    </button>
+    <button
+      class="chip-wrap"
+      data-filter="urgent"
+      bindtap="filter"
+    >
+      <view
+        class="chip {{filter === 'urgent' ? 'active' : ''}}"
+      >需跟进 {{urgentCount}}</view>
+    </button>
+  </view>
+  <view
+    wx:if="{{error && status === 'ready'}}"
+    class="error-inline"
+  >{{error}}<button
+      class="text-btn"
+      bindtap="load"
+    >重试</button></view>
+  <state-view
+    status="{{status}}"
+    message="{{error || '结对后，这里将记录你们一起成长的足迹。'}}"
+    title="{{status === 'empty' ? '还没有结对的孩子' : ''}}"
+    actionText="{{status === 'empty' ? '了解结对' : '重试'}}"
+    bind:retry="load"
+    bind:action="help"
+  />
+  <block
+    wx:if="{{status === 'ready'}}"
+  >
+    <child-card
+      wx:for="{{filtered}}"
+      wx:key="id"
+      student="{{item}}"
+      bind:open="open"
+    />
+    <state-view
+      wx:if="{{!filtered.length}}"
+      status="empty"
+      title="没有找到匹配内容"
+      message="当前没有需要跟进的孩子。"
+      actionText="清除筛选"
+      bind:action="clear"
+    />
+    <view
+      class="version"
+    >已展示全部结对孩子 · 数据仅在授权范围内可见</view>
+  </block>
+</view>

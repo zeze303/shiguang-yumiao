@@ -1,11 +1,328 @@
-<view class="page with-action">
-<state-view status="{{status}}" title="{{status==='empty'?'暂无成长档案':''}}" message="{{error}}" actionText="{{status==='empty'?'返回列表':'重试'}}" bind:retry="load" bind:action="back"/>
-<block wx:if="{{status==='ready'}}">
- <view class="card"><view class="row"><view class="avatar large">{{student.initial}}</view><view class="grow"><view class="profile-title">{{student.name}}</view><view class="small">{{student.grade}} · {{student.school}}</view><view class="tag {{student.urgent?'warn':'good'}}">{{student.urgent?'需跟进':student.level}}</view></view></view><view class="summary-grid"><view><text class="number">{{student.total===null?'—':student.total}}</text><text class="metadata">综合观察分</text></view><view><text class="number">{{logs.length}}</text><text class="metadata">陪伴记录</text></view><view><text class="number">{{poems.length}}</text><text class="metadata">成长诗</text></view></view></view>
- <view wx:if="{{student.urgent}}" class="notice alert"><image class="icon" src="/assets/icons/alert.svg"/><text>建议多一些耐心与回应。先了解近期具体情况，再与结对负责人一起跟进。</text></view>
- <view class="card section"><view class="section-head"><view class="section-title">四维成长观察</view><text class="small">{{student.period}}</text></view><view wx:if="{{student.hasScores}}" class="radar"><canvas type="2d" id="radar"/><view class="radar-label top">心理 {{student.scores[0]}}</view><view class="radar-label right">美育 {{student.scores[1]}}</view><view class="radar-label bottom">财商 {{student.scores[2]}}</view><view class="radar-label left">行为 {{student.scores[3]}}</view></view><view wx:else class="notice">暂无成长观察，不以零分代替缺失数据。</view><view class="dim-values"><view wx:for="{{student.dimensions}}" wx:key="key"><text class="number" style="color:{{item.key==='finance'?'#2c1810':item.color}}">{{item.value===null?'—':item.value}}</text><text class="metadata"><text class="dot" style="background:{{item.color}}"/>{{item.label}}</text></view></view><view class="small">记录来自成长观察，不用于诊断或孩子之间的排名。</view></view>
- <view class="card section"><view class="section-title">近四期趋势</view><view class="chips"><button wx:for="{{student.dimensions}}" wx:key="key" class="chip-wrap" data-i="{{index}}" bindtap="dim"><view class="chip {{dimension===index?'active':''}}">{{item.label}}</view></button></view><view wx:if="{{recordsError}}" class="error-inline">{{recordsError}}<button class="text-btn" bindtap="loadRecords">重试趋势</button></view><block wx:elif="{{records.length}}"><canvas type="2d" id="trend" class="trend-canvas" bindtouchend="point"/><view class="small trend-text">{{pointNote}}</view><view class="metadata">{{trendText}}</view></block><view wx:else class="notice">暂无历史观察，不从当前分数推导趋势。</view></view>
- <view class="card section"><view class="row between"><view class="section-title">AI 状态解读</view><view class="tag ai">AI 生成</view></view><view wx:if="{{aiBusy}}" class="small">正在整理建议</view><view wx:if="{{advice}}" class="body-copy">{{advice.status}}</view><view wx:elif="{{!aiBusy && !aiError}}" class="notice">还需要一点成长的线索。</view><view wx:if="{{aiError}}" class="error-inline">{{aiError}}<button class="text-btn" bindtap="loadAdvice">重新整理建议</button></view><view class="small">仅供参考，非专业诊断。来源周期以接口返回为准。</view><button class="text-btn" bindtap="advice">查看完整陪伴建议 <image class="icon small-icon" src="/assets/icons/arrow.svg"/></button></view>
- <view wx:if="{{poemsError}}" class="error-inline">{{poemsError}}<button class="text-btn" bindtap="loadPoems">重试成长诗</button></view><button wx:else class="card full-card section" bindtap="poem"><view class="row"><image class="icon" src="/assets/icons/book.svg"/><view class="grow"><view class="person-title">{{poems.length?'读一首属于'+student.name+'的成长诗':'为这段成长写一首诗'}}</view><view class="small">{{poems.length?poems[0].title:'从真实记录中，拾起小小的光'}}</view></view><image class="icon small-icon" src="/assets/icons/arrow.svg"/></view></button>
- <view class="section"><view class="section-title">陪伴的足迹</view><view wx:if="{{logsError}}" class="error-inline">{{logsError}}<button class="text-btn" bindtap="loadLogs">重试记录</button></view><view wx:else class="timeline"><button wx:for="{{logs}}" wx:key="id" class="timeline-item" data-id="{{item.id}}" bindtap="logDetail"><view class="small">{{item.date}} · {{item.type}}</view><view class="person-title">与{{student.name}}的一次{{item.type}}</view><view class="small">{{item.excerpt}}</view><view class="text-btn">查看记录</view></button><view wx:if="{{!logs.length}}" class="small">还没有陪伴记录。</view></view></view>
-</block><view wx:if="{{status==='ready'}}" class="bottom-action"><button class="btn secondary" bindtap="advice">陪伴建议</button><button wx:if="{{role==='volunteer'}}" class="btn" bindtap="log">记一次陪伴</button><button wx:else class="btn" bindtap="contact">跟进联系人</button></view></view>
+<view
+  class="page with-action"
+>
+  <state-view
+    status="{{status}}"
+    title="{{status==='empty'?'暂无成长档案':''}}"
+    message="{{error}}"
+    actionText="{{status==='empty'?'返回列表':'重试'}}"
+    bind:retry="load"
+    bind:action="back"
+  />
+  <block
+    wx:if="{{status==='ready'}}"
+  >
+    <view
+      class="card"
+    >
+      <view
+        class="row"
+      >
+        <view
+          class="avatar large"
+        >{{student.initial}}</view>
+        <view
+          class="grow"
+        >
+          <view
+            class="profile-title"
+          >{{student.name}}</view>
+          <view
+            class="small"
+          >{{student.grade}} · {{student.school}}</view>
+          <view
+            class="tag {{student.urgent?'warn':'good'}}"
+          >{{student.urgent?'需跟进':student.level}}</view>
+        </view>
+      </view>
+      <view
+        class="summary-grid"
+      >
+        <view>
+          <text
+            class="number"
+          >{{student.total===null?'—':student.total}}</text>
+          <text
+            class="metadata"
+          >综合观察分</text>
+        </view>
+        <view>
+          <text
+            class="number"
+          >{{logs.length}}</text>
+          <text
+            class="metadata"
+          >陪伴记录</text>
+        </view>
+        <view>
+          <text
+            class="number"
+          >{{poems.length}}</text>
+          <text
+            class="metadata"
+          >成长诗</text>
+        </view>
+      </view>
+    </view>
+    <view
+      wx:if="{{student.urgent}}"
+      class="notice alert"
+    >
+      <image
+        class="icon"
+        src="/assets/icons/alert.svg"
+      />
+      <text>建议多一些耐心与回应。先了解近期具体情况，再与结对负责人一起跟进。</text>
+    </view>
+    <view
+      class="card section"
+    >
+      <view
+        class="section-head"
+      >
+        <view
+          class="section-title"
+        >四维成长观察</view>
+        <text
+          class="small"
+        >{{student.period}}</text>
+      </view>
+      <view
+        wx:if="{{student.hasScores}}"
+        class="radar"
+      >
+        <canvas
+          type="2d"
+          id="radar"
+        />
+        <view
+          class="radar-label top"
+        >心理 {{student.scores[0]}}</view>
+        <view
+          class="radar-label right"
+        >美育 {{student.scores[1]}}</view>
+        <view
+          class="radar-label bottom"
+        >财商 {{student.scores[2]}}</view>
+        <view
+          class="radar-label left"
+        >行为 {{student.scores[3]}}</view>
+      </view>
+      <view
+        wx:else
+        class="notice"
+      >暂无成长观察，不以零分代替缺失数据。</view>
+      <view
+        class="dim-values"
+      >
+        <view
+          wx:for="{{student.dimensions}}"
+          wx:key="key"
+        >
+          <text
+            class="number"
+            style="color:{{item.key==='finance'?'#2c1810':item.color}}"
+          >{{item.value===null?'—':item.value}}</text>
+          <text
+            class="metadata"
+          ><text
+              class="dot"
+              style="background:{{item.color}}"
+            />{{item.label}}</text>
+        </view>
+      </view>
+      <view
+        class="small"
+      >记录来自成长观察，不用于诊断或孩子之间的排名。</view>
+    </view>
+    <view
+      class="card section"
+    >
+      <view
+        class="section-title"
+      >近四期趋势</view>
+      <view
+        class="chips"
+      >
+        <button
+          wx:for="{{student.dimensions}}"
+          wx:key="key"
+          class="chip-wrap"
+          data-i="{{index}}"
+          bindtap="dim"
+        >
+          <view
+            class="chip {{dimension===index?'active':''}}"
+          >{{item.label}}</view>
+        </button>
+      </view>
+      <view
+        wx:if="{{recordsError}}"
+        class="error-inline"
+      >{{recordsError}}<button
+          class="text-btn"
+          bindtap="loadRecords"
+        >重试趋势</button></view>
+      <block
+        wx:elif="{{records.length}}"
+      >
+        <canvas
+          type="2d"
+          id="trend"
+          class="trend-canvas"
+          bindtouchend="point"
+        />
+        <view
+          class="small trend-text"
+        >{{pointNote}}</view>
+        <view
+          class="metadata"
+        >{{trendText}}</view>
+      </block>
+      <view
+        wx:else
+        class="notice"
+      >暂无历史观察，不从当前分数推导趋势。</view>
+    </view>
+    <view
+      class="card section"
+    >
+      <view
+        class="row between"
+      >
+        <view
+          class="section-title"
+        >AI 状态解读</view>
+        <view
+          class="tag ai"
+        >AI 生成</view>
+      </view>
+      <view
+        wx:if="{{aiBusy}}"
+        class="small"
+      >正在整理建议</view>
+      <view
+        wx:if="{{advice}}"
+        class="body-copy"
+      >{{advice.status}}</view>
+      <view
+        wx:elif="{{!aiBusy && !aiError}}"
+        class="notice"
+      >还需要一点成长的线索。</view>
+      <view
+        wx:if="{{aiError}}"
+        class="error-inline"
+      >{{aiError}}<button
+          class="text-btn"
+          bindtap="loadAdvice"
+        >重新整理建议</button></view>
+      <view
+        class="small"
+      >仅供参考，非专业诊断。来源周期以接口返回为准。</view>
+      <button
+        class="text-btn"
+        bindtap="advice"
+      >查看完整陪伴建议 <image
+          class="icon small-icon"
+          src="/assets/icons/arrow.svg"
+        /></button>
+    </view>
+    <view
+      wx:if="{{poemsError}}"
+      class="error-inline"
+    >{{poemsError}}<button
+        class="text-btn"
+        bindtap="loadPoems"
+      >重试成长诗</button></view>
+    <button
+      wx:else
+      class="card full-card section"
+      bindtap="poem"
+    >
+      <view
+        class="row"
+      >
+        <image
+          class="icon"
+          src="/assets/icons/book.svg"
+        />
+        <view
+          class="grow"
+        >
+          <view
+            class="person-title"
+          >{{poems.length?'读一首属于'+student.name+'的成长诗':'为这段成长写一首诗'}}</view>
+          <view
+            class="small"
+          >{{poems.length?poems[0].title:'从真实记录中，拾起小小的光'}}</view>
+        </view>
+        <image
+          class="icon small-icon"
+          src="/assets/icons/arrow.svg"
+        />
+      </view>
+    </button>
+    <view
+      class="section"
+    >
+      <view
+        class="section-title"
+      >陪伴的足迹</view>
+      <view
+        wx:if="{{logsError}}"
+        class="error-inline"
+      >{{logsError}}<button
+          class="text-btn"
+          bindtap="loadLogs"
+        >重试记录</button></view>
+      <view
+        wx:else
+        class="timeline"
+      >
+        <button
+          wx:for="{{logs}}"
+          wx:key="id"
+          class="timeline-item"
+          data-id="{{item.id}}"
+          bindtap="logDetail"
+        >
+          <view
+            class="small"
+          >{{item.date}} · {{item.type}}</view>
+          <view
+            class="person-title"
+          >与{{student.name}}的一次{{item.type}}</view>
+          <view
+            class="small"
+          >{{item.excerpt}}</view>
+          <view
+            class="text-btn"
+          >查看记录</view>
+        </button>
+        <view
+          wx:if="{{!logs.length}}"
+          class="small"
+        >还没有陪伴记录。</view>
+      </view>
+    </view>
+  </block>
+  <view
+    wx:if="{{status==='ready'}}"
+    class="bottom-action"
+  >
+    <button
+      class="btn secondary"
+      bindtap="advice"
+    >陪伴建议</button>
+    <button
+      wx:if="{{role==='volunteer'}}"
+      class="btn"
+      bindtap="log"
+    >记一次陪伴</button>
+    <button
+      wx:else
+      class="btn"
+      bindtap="contact"
+    >跟进联系人</button>
+  </view>
+</view>

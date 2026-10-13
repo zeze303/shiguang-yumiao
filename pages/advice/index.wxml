@@ -1,1 +1,91 @@
-<view class="page"><state-view status="{{status}}" title="{{status==='empty'?'还需要一点成长的线索':''}}" message="{{error || '暂时没有可用建议，请先查看档案。'}}" actionText="{{status==='empty'?'返回档案':'重试'}}" bind:retry="load" bind:action="back"/><block wx:if="{{status==='ready'}}"><view class="tag ai">AI 陪伴建议 · {{student.name}}</view><view class="title section">先从一句轻轻的问候开始</view><view class="subtitle">基于四维观察和近期陪伴记录整理</view><view class="card section"><view class="section-head"><view class="section-title">开场话术</view><button class="text-btn" bindtap="copy">复制</button></view><view class="quote serif">“{{suggestion.openers[0]}}”</view></view><view class="card section"><view class="section-title">一起做的小活动</view><view wx:for="{{suggestion.activities}}" wx:key="*this" class="activity"><view class="step-num">0{{index+1}}</view><view class="grow">{{item}}</view></view></view><view class="card section"><view class="section-title">陪伴时请留意</view><view wx:for="{{suggestion.cautions}}" wx:key="*this" class="body-copy">{{item}}</view><view class="small">AI 生成 · 仅供参考，非专业诊断。{{suggestion.sourcePeriod ? '来源周期：'+suggestion.sourcePeriod : '接口尚未提供建议来源周期。'}}</view></view><view wx:if="{{error}}" class="error-inline">{{error}}，原建议仍可阅读。</view><button class="btn secondary full section" bindtap="load" disabled="{{busy}}">{{busy?'正在整理建议':error?'重试本次建议':'重新生成建议'}}</button><button wx:if="{{role==='volunteer'}}" class="btn full section" bindtap="log">记下这次陪伴</button></block></view>
+<view
+  class="page"
+>
+  <state-view
+    status="{{status}}"
+    title="{{status==='empty'?'还需要一点成长的线索':''}}"
+    message="{{error || '暂时没有可用建议，请先查看档案。'}}"
+    actionText="{{status==='empty'?'返回档案':'重试'}}"
+    bind:retry="load"
+    bind:action="back"
+  />
+  <block
+    wx:if="{{status==='ready'}}"
+  >
+    <view
+      class="tag ai"
+    >AI 陪伴建议 · {{student.name}}</view>
+    <view
+      class="title section"
+    >先从一句轻轻的问候开始</view>
+    <view
+      class="subtitle"
+    >基于四维观察和近期陪伴记录整理</view>
+    <view
+      class="card section"
+    >
+      <view
+        class="section-head"
+      >
+        <view
+          class="section-title"
+        >开场话术</view>
+        <button
+          class="text-btn"
+          bindtap="copy"
+        >复制</button>
+      </view>
+      <view
+        class="quote serif"
+      >“{{suggestion.openers[0]}}”</view>
+    </view>
+    <view
+      class="card section"
+    >
+      <view
+        class="section-title"
+      >一起做的小活动</view>
+      <view
+        wx:for="{{suggestion.activities}}"
+        wx:key="*this"
+        class="activity"
+      >
+        <view
+          class="step-num"
+        >0{{index+1}}</view>
+        <view
+          class="grow"
+        >{{item}}</view>
+      </view>
+    </view>
+    <view
+      class="card section"
+    >
+      <view
+        class="section-title"
+      >陪伴时请留意</view>
+      <view
+        wx:for="{{suggestion.cautions}}"
+        wx:key="*this"
+        class="body-copy"
+      >{{item}}</view>
+      <view
+        class="small"
+      >AI 生成 · 仅供参考，非专业诊断。{{suggestion.sourcePeriod ? '来源周期：'+suggestion.sourcePeriod : '接口尚未提供建议来源周期。'}}</view>
+    </view>
+    <view
+      wx:if="{{error}}"
+      class="error-inline"
+    >{{error}}，原建议仍可阅读。</view>
+    <button
+      class="btn secondary full section"
+      bindtap="load"
+      disabled="{{busy}}"
+    >{{busy?'正在整理建议':error?'重试本次建议':'重新生成建议'}}</button>
+    <button
+      wx:if="{{role==='volunteer'}}"
+      class="btn full section"
+      bindtap="log"
+    >记下这次陪伴</button>
+  </block>
+</view>

@@ -1,1 +1,63 @@
-const api=require('../../utils/api'),ui=require('../../utils/page');Page({data:{status:'loading',items:[],filtered:[],query:'',filter:'all',filters:[{id:'all',text:'全部'},{id:'urgent',text:'需跟进'},{id:'unpaired',text:'未结对'}]},onShow(){this.load();},async load(){if(!await ui.guard(this,['admin']))return;try{const items=await api.adminStudents();this.setData({items,status:items.length?'ready':'empty',error:''});this.apply();}catch(e){if(ui.authError(this,e))return;this.setData({status:ui.temporaryError(e)&&this.data.items.length?'ready':'error',error:ui.errorMessage(e)});}},apply(){const {filter,query}=this.data;this.setData({filtered:this.data.items.filter(s=>(filter==='all'||filter==='urgent'&&s.urgent||filter==='unpaired'&&s.is_paired===false)&&(s.name+s.school+s.grade+(s.volunteer_name||'')).includes(query))});},search(e){this.setData({query:e.detail.value});this.apply();},filter(e){this.setData({filter:e.currentTarget.dataset.id});this.apply();},clear(){this.setData({query:'',filter:'all'});this.apply();},open(e){ui.navigate('child-detail',{id:e.detail.id});},help(){ui.info('档案接入','请在授权后台建立孩子档案。阶段1管理页展示占位数据。');}});
+const api = require('../../utils/api'),
+  ui = require('../../utils/page');
+Page({
+  data: {
+    status: 'loading',
+    items: [],
+    filtered: [],
+    query: '',
+    filter: 'all',
+    filters: [
+      { id: 'all', text: '全部' },
+      { id: 'urgent', text: '需跟进' },
+      { id: 'unpaired', text: '未结对' }
+    ]
+  },
+  onShow() {
+    this.load();
+  },
+  async load() {
+    if (!(await ui.guard(this, ['admin']))) return;
+    try {
+      const items = await api.adminStudents();
+      this.setData({ items, status: items.length ? 'ready' : 'empty', error: '' });
+      this.apply();
+    } catch (e) {
+      if (ui.authError(this, e)) return;
+      this.setData({
+        status: ui.temporaryError(e) && this.data.items.length ? 'ready' : 'error',
+        error: ui.errorMessage(e)
+      });
+    }
+  },
+  apply() {
+    const { filter, query } = this.data;
+    this.setData({
+      filtered: this.data.items.filter(
+        (s) =>
+          (filter === 'all' ||
+            (filter === 'urgent' && s.urgent) ||
+            (filter === 'unpaired' && s.is_paired === false)) &&
+          (s.name + s.school + s.grade + (s.volunteer_name || '')).includes(query)
+      )
+    });
+  },
+  search(e) {
+    this.setData({ query: e.detail.value });
+    this.apply();
+  },
+  filter(e) {
+    this.setData({ filter: e.currentTarget.dataset.id });
+    this.apply();
+  },
+  clear() {
+    this.setData({ query: '', filter: 'all' });
+    this.apply();
+  },
+  open(e) {
+    ui.navigate('child-detail', { id: e.detail.id });
+  },
+  help() {
+    ui.info('档案接入', '请在授权后台建立孩子档案。阶段1管理页展示占位数据。');
+  }
+});

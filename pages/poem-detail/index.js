@@ -1,1 +1,32 @@
-const api=require('../../utils/api'),ui=require('../../utils/page');Page({data:{status:'loading',poem:null},onLoad(q){this.query=q;this.load();},async load(){if(!await ui.guard(this))return;try{const items=await api.poems(this.query.studentId);const poem=items.find(p=>String(p.id)===this.query.id);this.setData({poem,status:poem&&poem.content?'ready':'empty',error:''});}catch(e){if(ui.authError(this,e))return;this.setData({status:'error',error:ui.errorMessage(e)});}},coverError(){this.setData({'poem.cover_url':''});},generate(){ui.navigate('poem-generate',{id:this.data.poem.student_id});},share(){ui.navigate('poem-share',{id:this.data.poem.id,studentId:this.data.poem.student_id});},back(){wx.navigateBack();}});
+const api = require('../../utils/api'),
+  ui = require('../../utils/page');
+Page({
+  data: { status: 'loading', poem: null },
+  onLoad(q) {
+    this.query = q;
+    this.load();
+  },
+  async load() {
+    if (!(await ui.guard(this))) return;
+    try {
+      const items = await api.poems(this.query.studentId);
+      const poem = items.find((p) => String(p.id) === this.query.id);
+      this.setData({ poem, status: poem && poem.content ? 'ready' : 'empty', error: '' });
+    } catch (e) {
+      if (ui.authError(this, e)) return;
+      this.setData({ status: 'error', error: ui.errorMessage(e) });
+    }
+  },
+  coverError() {
+    this.setData({ 'poem.cover_url': '' });
+  },
+  generate() {
+    ui.navigate('poem-generate', { id: this.data.poem.student_id });
+  },
+  share() {
+    ui.navigate('poem-share', { id: this.data.poem.id, studentId: this.data.poem.student_id });
+  },
+  back() {
+    wx.navigateBack();
+  }
+});

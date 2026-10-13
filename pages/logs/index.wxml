@@ -1,1 +1,212 @@
-<page-meta page-style="{{filterOpen ? 'overflow:hidden;' : ''}}"/><view class="page tab-page"><view class="section-head"><view class="grow"><view class="title">陪伴的足迹</view><view class="small">每一次认真倾听，都有回响。</view></view><button class="btn compact" bindtap="add"><image class="icon" src="/assets/icons/plus.svg"/>新增</button></view><button class="student-filter" bindtap="toggleFilter" disabled="{{!role}}" aria-label="按孩子筛选，当前{{filterLabel}}" aria-expanded="{{filterOpen}}"><text class="filter-caption">陪伴对象</text><text class="filter-current">{{filterLabel}}</text><image class="filter-arrow" src="/assets/icons/arrow.svg"/></button><view wx:if="{{error && status==='ready'}}" class="error-inline">{{error}}<button class="text-btn" bindtap="load">重试</button></view><state-view status="{{status}}" title="{{status==='empty'?'陪伴的第一页，等你写下':''}}" message="{{error || '留下这次陪伴的具体观察。'}}" actionText="{{status==='empty'?'新增记录':'重试'}}" bind:retry="load" bind:action="add"/><block wx:if="{{status==='ready'}}"><button wx:for="{{filtered}}" wx:key="id" class="card log-card" data-id="{{item.id}}" data-student="{{item.student_id}}" bindtap="open"><view class="row between"><view class="record-title">与{{item.student_name || '孩子'}}的一次{{item.type}}</view><view class="tag">{{item.type}}</view></view><view class="record-body">{{item.content}}</view><image wx:if="{{item.illustration}}" class="thumb-art" src="/assets/landscape.svg" mode="aspectFill"/><view wx:if="{{item.images.length}}" class="upload-grid"><image wx:for="{{item.images}}" wx:key="*this" class="thumb" src="{{item}}" mode="aspectFill"/></view><view class="card-footer"><text>{{item.date}} · {{item.volunteer_name || '记录人'}}</text><image class="icon small-icon" src="/assets/icons/arrow.svg"/></view></button><state-view wx:if="{{!filtered.length}}" status="empty" title="没有找到匹配内容" message="当前对象还没有陪伴记录。" actionText="清除筛选" bind:action="clear"/></block></view><view wx:if="{{filterOpen && (role==='volunteer' || role==='admin')}}" class="filter-layer"><view class="filter-mask" bindtap="closeFilter" catchtouchmove="preventMove"/><view class="filter-sheet" aria-role="dialog" aria-label="选择陪伴对象"><view class="filter-sheet-head"><button class="filter-sheet-toggle" bindtap="toggleFilter"><text class="section-title">选择陪伴对象</text><image class="filter-arrow expanded" src="/assets/icons/arrow.svg"/></button><button class="filter-close" bindtap="closeFilter" aria-label="收起筛选"><image class="icon" src="/assets/icons/close.svg"/></button></view><view class="filter-sheet-note small">当前选择：{{filterLabel}}</view><scroll-view class="filter-options" scroll-y="{{true}}" enhanced="{{true}}" bounces="{{false}}"><button class="filter-option {{filter==='all'?'selected':''}}" data-id="all" bindtap="filter"><text class="grow">全部</text><text wx:if="{{filter==='all'}}" class="filter-selected">已选</text></button><button wx:for="{{children}}" wx:key="id" class="filter-option {{filter===item.id?'selected':''}}" data-id="{{item.id}}" bindtap="filter"><view class="grow"><view>{{item.name}}</view><view wx:if="{{item.grade || item.school}}" class="metadata">{{item.grade}}{{item.grade && item.school?' · ':''}}{{item.school}}</view></view><text wx:if="{{filter===item.id}}" class="filter-selected">已选</text></button><view wx:if="{{!children.length}}" class="filter-no-children small">暂无可筛选的孩子，可查看全部内容。</view></scroll-view></view></view>
+<page-meta
+  page-style="{{filterOpen ? 'overflow:hidden;' : ''}}"
+/>
+<view
+  class="page tab-page"
+>
+  <view
+    class="section-head"
+  >
+    <view
+      class="grow"
+    >
+      <view
+        class="title"
+      >陪伴的足迹</view>
+      <view
+        class="small"
+      >每一次认真倾听，都有回响。</view>
+    </view>
+    <button
+      class="btn compact"
+      bindtap="add"
+    ><image
+        class="icon"
+        src="/assets/icons/plus.svg"
+      />新增</button>
+  </view>
+  <button
+    class="student-filter"
+    bindtap="toggleFilter"
+    disabled="{{!role}}"
+    aria-label="按孩子筛选，当前{{filterLabel}}"
+    aria-expanded="{{filterOpen}}"
+  >
+    <text
+      class="filter-caption"
+    >陪伴对象</text>
+    <text
+      class="filter-current"
+    >{{filterLabel}}</text>
+    <image
+      class="filter-arrow"
+      src="/assets/icons/arrow.svg"
+    />
+  </button>
+  <view
+    wx:if="{{error && status==='ready'}}"
+    class="error-inline"
+  >{{error}}<button
+      class="text-btn"
+      bindtap="load"
+    >重试</button></view>
+  <state-view
+    status="{{status}}"
+    title="{{status==='empty'?'陪伴的第一页，等你写下':''}}"
+    message="{{error || '留下这次陪伴的具体观察。'}}"
+    actionText="{{status==='empty'?'新增记录':'重试'}}"
+    bind:retry="load"
+    bind:action="add"
+  />
+  <block
+    wx:if="{{status==='ready'}}"
+  >
+    <button
+      wx:for="{{filtered}}"
+      wx:key="id"
+      class="card log-card"
+      data-id="{{item.id}}"
+      data-student="{{item.student_id}}"
+      bindtap="open"
+    >
+      <view
+        class="row between"
+      >
+        <view
+          class="record-title"
+        >与{{item.student_name || '孩子'}}的一次{{item.type}}</view>
+        <view
+          class="tag"
+        >{{item.type}}</view>
+      </view>
+      <view
+        class="record-body"
+      >{{item.content}}</view>
+      <image
+        wx:if="{{item.illustration}}"
+        class="thumb-art"
+        src="/assets/landscape.svg"
+        mode="aspectFill"
+      />
+      <view
+        wx:if="{{item.images.length}}"
+        class="upload-grid"
+      >
+        <image
+          wx:for="{{item.images}}"
+          wx:key="*this"
+          class="thumb"
+          src="{{item}}"
+          mode="aspectFill"
+        />
+      </view>
+      <view
+        class="card-footer"
+      >
+        <text>{{item.date}} · {{item.volunteer_name || '记录人'}}</text>
+        <image
+          class="icon small-icon"
+          src="/assets/icons/arrow.svg"
+        />
+      </view>
+    </button>
+    <state-view
+      wx:if="{{!filtered.length}}"
+      status="empty"
+      title="没有找到匹配内容"
+      message="当前对象还没有陪伴记录。"
+      actionText="清除筛选"
+      bind:action="clear"
+    />
+  </block>
+</view>
+<view
+  wx:if="{{filterOpen && (role==='volunteer' || role==='admin')}}"
+  class="filter-layer"
+>
+  <view
+    class="filter-mask"
+    bindtap="closeFilter"
+    catchtouchmove="preventMove"
+  />
+  <view
+    class="filter-sheet"
+    aria-role="dialog"
+    aria-label="选择陪伴对象"
+  >
+    <view
+      class="filter-sheet-head"
+    >
+      <button
+        class="filter-sheet-toggle"
+        bindtap="toggleFilter"
+      >
+        <text
+          class="section-title"
+        >选择陪伴对象</text>
+        <image
+          class="filter-arrow expanded"
+          src="/assets/icons/arrow.svg"
+        />
+      </button>
+      <button
+        class="filter-close"
+        bindtap="closeFilter"
+        aria-label="收起筛选"
+      >
+        <image
+          class="icon"
+          src="/assets/icons/close.svg"
+        />
+      </button>
+    </view>
+    <view
+      class="filter-sheet-note small"
+    >当前选择：{{filterLabel}}</view>
+    <scroll-view
+      class="filter-options"
+      scroll-y="{{true}}"
+      enhanced="{{true}}"
+      bounces="{{false}}"
+    >
+      <button
+        class="filter-option {{filter==='all'?'selected':''}}"
+        data-id="all"
+        bindtap="filter"
+      >
+        <text
+          class="grow"
+        >全部</text>
+        <text
+          wx:if="{{filter==='all'}}"
+          class="filter-selected"
+        >已选</text>
+      </button>
+      <button
+        wx:for="{{children}}"
+        wx:key="id"
+        class="filter-option {{filter===item.id?'selected':''}}"
+        data-id="{{item.id}}"
+        bindtap="filter"
+      >
+        <view
+          class="grow"
+        >
+          <view>{{item.name}}</view>
+          <view
+            wx:if="{{item.grade || item.school}}"
+            class="metadata"
+          >{{item.grade}}{{item.grade && item.school?' · ':''}}{{item.school}}</view>
+        </view>
+        <text
+          wx:if="{{filter===item.id}}"
+          class="filter-selected"
+        >已选</text>
+      </button>
+      <view
+        wx:if="{{!children.length}}"
+        class="filter-no-children small"
+      >暂无可筛选的孩子，可查看全部内容。</view>
+    </scroll-view>
+  </view>
+</view>

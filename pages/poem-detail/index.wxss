@@ -1,1 +1,3 @@
-.signature{white-space:pre-line}
+.signature {
+  white-space: pre-line;
+}

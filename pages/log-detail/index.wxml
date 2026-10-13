@@ -1,1 +1,67 @@
-<view class="page"><state-view status="{{status}}" title="{{status==='empty'?'这条记录暂时不可用':''}}" message="{{error || '记录可能已撤回，或访问范围已变更。'}}" actionText="{{status==='empty'?'返回列表':'重试'}}" bind:retry="load" bind:action="back"/><block wx:if="{{status==='ready'}}"><view class="card"><view class="row"><view class="avatar">苗</view><view class="grow"><view class="person-title">与{{item.student_name || '孩子'}}的一次{{item.type}}</view><view class="small">{{item.created_at}} · {{item.volunteer_name || '记录人'}}</view></view><view class="tag">{{item.type}}</view></view><view class="body-copy">{{item.content}}</view><image wx:for="{{item.images}}" wx:key="*this" class="photo" src="{{item}}" data-src="{{item}}" bindtap="preview" mode="widthFix"/><image wx:if="{{item.illustration}}" class="illustration" src="/assets/landscape.svg" mode="aspectFill"/></view><view class="notice"><image class="icon" src="/assets/icons/shield.svg"/><text>这是陪伴的观察记录，用于后续跟进，不作为孩子的诊断或评价。</text></view></block></view>
+<view
+  class="page"
+>
+  <state-view
+    status="{{status}}"
+    title="{{status==='empty'?'这条记录暂时不可用':''}}"
+    message="{{error || '记录可能已撤回，或访问范围已变更。'}}"
+    actionText="{{status==='empty'?'返回列表':'重试'}}"
+    bind:retry="load"
+    bind:action="back"
+  />
+  <block
+    wx:if="{{status==='ready'}}"
+  >
+    <view
+      class="card"
+    >
+      <view
+        class="row"
+      >
+        <view
+          class="avatar"
+        >苗</view>
+        <view
+          class="grow"
+        >
+          <view
+            class="person-title"
+          >与{{item.student_name || '孩子'}}的一次{{item.type}}</view>
+          <view
+            class="small"
+          >{{item.created_at}} · {{item.volunteer_name || '记录人'}}</view>
+        </view>
+        <view
+          class="tag"
+        >{{item.type}}</view>
+      </view>
+      <view
+        class="body-copy"
+      >{{item.content}}</view>
+      <image
+        wx:for="{{item.images}}"
+        wx:key="*this"
+        class="photo"
+        src="{{item}}"
+        data-src="{{item}}"
+        bindtap="preview"
+        mode="widthFix"
+      />
+      <image
+        wx:if="{{item.illustration}}"
+        class="illustration"
+        src="/assets/landscape.svg"
+        mode="aspectFill"
+      />
+    </view>
+    <view
+      class="notice"
+    >
+      <image
+        class="icon"
+        src="/assets/icons/shield.svg"
+      />
+      <text>这是陪伴的观察记录，用于后续跟进，不作为孩子的诊断或评价。</text>
+    </view>
+  </block>
+</view>

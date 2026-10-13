@@ -1,1 +1,3 @@
-.code-input{letter-spacing:2rpx}
+.code-input {
+  letter-spacing: 2rpx;
+}

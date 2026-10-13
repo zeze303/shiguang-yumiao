@@ -1,1 +1,61 @@
-<button class="card full-card" bindtap="open"><view class="row child-top"><view class="avatar">{{student.initial}}</view><view class="grow"><view class="person-title">{{student.name}}</view><view class="small">{{student.grade}} · {{student.school}}</view></view><view class="tag {{student.urgent ? 'warn' : student.total >= 80 ? 'good' : ''}}"><image wx:if="{{student.urgent}}" class="icon" src="/assets/icons/alert.svg"/>{{student.urgent ? '需跟进' : student.level}}</view></view><view class="mini-grid"><view wx:for="{{student.dimensions}}" wx:key="key"><view class="mini-label"><text>{{item.label}}</text><text>{{item.value === null ? '—' : item.value}}</text></view><view class="mini-track"><view class="mini-fill" style="background:{{item.color}};width:{{item.value === null ? 0 : item.value}}%"/></view></view></view><view class="card-footer"><text>{{admin ? (student.is_paired === false ? '尚未结对' : student.volunteer_name ? '结对人 · ' + student.volunteer_name : student.is_paired === true ? '已结对' : '结对状态待确认') : '最近陪伴 ' + (student.last || '暂无')}} · {{student.period || '暂无成长观察'}}</text><image class="icon small-icon" src="/assets/icons/arrow.svg"/></view></button>
+<button
+  class="card full-card"
+  bindtap="open"
+>
+  <view
+    class="row child-top"
+  >
+    <view
+      class="avatar"
+    >{{student.initial}}</view>
+    <view
+      class="grow"
+    >
+      <view
+        class="person-title"
+      >{{student.name}}</view>
+      <view
+        class="small"
+      >{{student.grade}} · {{student.school}}</view>
+    </view>
+    <view
+      class="tag {{student.urgent ? 'warn' : student.total >= 80 ? 'good' : ''}}"
+    ><image
+        wx:if="{{student.urgent}}"
+        class="icon"
+        src="/assets/icons/alert.svg"
+      />{{student.urgent ? '需跟进' : student.level}}</view>
+  </view>
+  <view
+    class="mini-grid"
+  >
+    <view
+      wx:for="{{student.dimensions}}"
+      wx:key="key"
+    >
+      <view
+        class="mini-label"
+      >
+        <text>{{item.label}}</text>
+        <text>{{item.value === null ? '—' : item.value}}</text>
+      </view>
+      <view
+        class="mini-track"
+      >
+        <view
+          class="mini-fill"
+          style="background:{{item.color}};width:{{item.value === null ? 0 : item.value}}%"
+        />
+      </view>
+    </view>
+  </view>
+  <view
+    class="card-footer"
+  >
+    <text>{{admin ? (student.is_paired === false ? '尚未结对' : student.volunteer_name ? '结对人 · ' + student.volunteer_name : student.is_paired === true ? '已结对' : '结对状态待确认') : '最近陪伴 ' + (student.last || '暂无')}} · {{student.period || '暂无成长观察'}}</text>
+    <image
+      class="icon small-icon"
+      src="/assets/icons/arrow.svg"
+    />
+  </view>
+</button>

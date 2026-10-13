@@ -1,1 +1,52 @@
-<view wx:if="{{status === 'loading'}}" aria-role="status"><view class="small loading-copy">正在载入，请稍候</view><view wx:for="{{rows}}" wx:key="*this" class="sk-card"><view class="skeleton sk-title"/><view class="skeleton"/><view class="skeleton sk-short"/><view class="skeleton sk-bar"/></view></view><view wx:elif="{{status === 'error' || status === 'empty'}}" class="empty"><image class="empty-art" src="/assets/empty.svg" mode="aspectFit"/><view class="empty-title">{{title || (status === 'error' ? '暂时没能加载出来' : '这里还没有内容')}}</view><view class="empty-copy">{{message || '请检查连接后重试。'}}</view><button wx:if="{{status === 'error'}}" class="btn" bindtap="retry">{{actionText}}</button><button wx:elif="{{actionText}}" class="btn" bindtap="action">{{actionText}}</button></view>
+<view
+  wx:if="{{status === 'loading'}}"
+  aria-role="status"
+>
+  <view
+    class="small loading-copy"
+  >正在载入，请稍候</view>
+  <view
+    wx:for="{{rows}}"
+    wx:key="*this"
+    class="sk-card"
+  >
+    <view
+      class="skeleton sk-title"
+    />
+    <view
+      class="skeleton"
+    />
+    <view
+      class="skeleton sk-short"
+    />
+    <view
+      class="skeleton sk-bar"
+    />
+  </view>
+</view>
+<view
+  wx:elif="{{status === 'error' || status === 'empty'}}"
+  class="empty"
+>
+  <image
+    class="empty-art"
+    src="/assets/empty.svg"
+    mode="aspectFit"
+  />
+  <view
+    class="empty-title"
+  >{{title || (status === 'error' ? '暂时没能加载出来' : '这里还没有内容')}}</view>
+  <view
+    class="empty-copy"
+  >{{message || '请检查连接后重试。'}}</view>
+  <button
+    wx:if="{{status === 'error'}}"
+    class="btn"
+    bindtap="retry"
+  >{{actionText}}</button>
+  <button
+    wx:elif="{{actionText}}"
+    class="btn"
+    bindtap="action"
+  >{{actionText}}</button>
+</view>
