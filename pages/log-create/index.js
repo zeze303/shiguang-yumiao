@@ -1,6 +1,5 @@
 const api = require('../../utils/api');
 const ui = require('../../utils/page');
-const config = require('../../config');
 Page({
   data: {
     status: 'loading',
@@ -8,7 +7,6 @@ Page({
     childIndex: 0,
     type: '活动',
     content: '',
-    images: [],
     busy: false,
     error: '',
     fieldError: '',
@@ -22,7 +20,10 @@ Page({
   onLoad(q) {
     this.preselected = q.id;
     const draft = getApp().globalData.logDraft;
-    if (draft && (!q.id || draft.studentId === q.id)) this.setData(draft);
+    if (draft && (!q.id || draft.studentId === q.id)) {
+      this.setData({ studentId: draft.studentId, type: draft.type, content: draft.content });
+      getApp().globalData.logDraft = { studentId: draft.studentId, type: draft.type, content: draft.content };
+    }
     this.load();
   },
   async load() {
@@ -61,57 +62,18 @@ Page({
     getApp().globalData.logDraft = {
       studentId: this.data.children[this.data.childIndex].id,
       type: this.data.type,
-      content: this.data.content,
-      images: this.data.images
+      content: this.data.content
     };
-    if ((this.data.content || this.data.images.length) && wx.enableAlertBeforeUnload)
+    if (this.data.content && wx.enableAlertBeforeUnload)
       wx.enableAlertBeforeUnload({ message: '内容尚未保存，草稿仅在本次登录会话中保留。' });
   },
   onUnload() {
     if (!this.saved) this.draft();
   },
-  upload() {
-    if (this.data.busy || this.data.images.length >= 3) return;
-    if (!config.useMock) {
-      ui.info(
-        '图片上传尚未接通',
-        '接口文档未定义上传契约。真实模式可提交文字，不能提交本地临时图片路径。'
-      );
-      return;
-    }
-    wx.chooseMedia({
-      count: 3 - this.data.images.length,
-      mediaType: ['image'],
-      sizeType: ['compressed'],
-      success: (r) => {
-        if (r.tempFiles.some((f) => f.size > 5 * 1024 * 1024)) {
-          this.setData({ error: '请选择每张不超过 5MB 的图片。' });
-          return;
-        }
-        this.setData({
-          images: this.data.images.concat(r.tempFiles.map((f) => f.tempFilePath)),
-          error: ''
-        });
-        this.draft();
-      },
-      fail: (e) => {
-        if (!/cancel/.test(e.errMsg || '')) this.setData({ error: '图片暂时无法添加，请重试。' });
-      }
-    });
-  },
-  remove(e) {
-    if (this.data.busy) return;
-    this.setData({ images: this.data.images.filter((_, i) => i !== +e.currentTarget.dataset.i) });
-    this.draft();
-  },
   async submit() {
     if (this.data.busy || !this.data.children.length) return;
     if (this.data.content.trim().length < 10) {
       this.setData({ fieldError: '请至少写下10个字的陪伴观察。', focus: true });
-      return;
-    }
-    if (!config.useMock && this.data.images.length) {
-      this.setData({ error: '图片上传尚未接通，请先移除演示图片。' });
       return;
     }
     this.setData({ busy: true, error: '' });
@@ -120,7 +82,7 @@ Page({
         student_id: this.data.children[this.data.childIndex].id,
         type: this.data.type,
         content: this.data.content.trim(),
-        images: this.data.images
+        images: []
       });
       this.saved = true;
       getApp().globalData.logDraft = null;

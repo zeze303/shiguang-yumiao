@@ -82,24 +82,6 @@
       <view
         class="record-body"
       >{{item.content}}</view>
-      <image
-        wx:if="{{item.illustration}}"
-        class="thumb-art"
-        src="/assets/landscape.svg"
-        mode="aspectFill"
-      />
-      <view
-        wx:if="{{item.images.length}}"
-        class="upload-grid"
-      >
-        <image
-          wx:for="{{item.images}}"
-          wx:key="*this"
-          class="thumb"
-          src="{{item}}"
-          mode="aspectFill"
-        />
-      </view>
       <view
         class="card-footer"
       >

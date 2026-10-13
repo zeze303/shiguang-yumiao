@@ -222,7 +222,7 @@ module.exports = {
         studentId: data.studentId || data.student_id,
         type: data.type,
         content: data.content,
-        images: data.images || []
+        images: []
       }
     }).then(log),
   poems: (id) =>

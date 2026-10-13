@@ -17,9 +17,6 @@ Page({
       this.setData({ status: 'error', error: ui.errorMessage(e) });
     }
   },
-  preview(e) {
-    wx.previewImage({ urls: this.data.item.images, current: e.currentTarget.dataset.src });
-  },
   back() {
     wx.navigateBack();
   }

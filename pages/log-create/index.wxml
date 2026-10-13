@@ -79,57 +79,6 @@
       >{{fieldError}}</view>
     </view>
     <view
-      class="field"
-    >
-      <view
-        class="row between"
-      >
-        <view
-          class="label"
-        >添加图片（选填）</view>
-        <text
-          class="small"
-        >{{images.length}}/3</text>
-      </view>
-      <view
-        class="upload-grid"
-      >
-        <view
-          wx:for="{{images}}"
-          wx:key="*this"
-          class="upload-thumb"
-        >
-          <image
-            src="{{item}}"
-            mode="aspectFill"
-          />
-          <button
-            class="remove"
-            data-i="{{index}}"
-            bindtap="remove"
-            aria-label="删除图片"
-            disabled="{{busy}}"
-          >
-            <image
-              src="/assets/icons/close-active.svg"
-            />
-          </button>
-        </view>
-        <button
-          wx:if="{{images.length<3}}"
-          class="upload"
-          bindtap="upload"
-          disabled="{{busy}}"
-        ><image
-            class="icon"
-            src="/assets/icons/plus.svg"
-          />添加图片</button>
-      </view>
-      <view
-        class="field-hint"
-      >最多 3 张，每张不超过 5MB。避免上传可识别身份的照片。当前图片仅为本次 mock 会话演示。</view>
-    </view>
-    <view
       class="notice"
     >
       <image

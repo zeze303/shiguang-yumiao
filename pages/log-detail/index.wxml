@@ -38,21 +38,6 @@
       <view
         class="body-copy"
       >{{item.content}}</view>
-      <image
-        wx:for="{{item.images}}"
-        wx:key="*this"
-        class="photo"
-        src="{{item}}"
-        data-src="{{item}}"
-        bindtap="preview"
-        mode="widthFix"
-      />
-      <image
-        wx:if="{{item.illustration}}"
-        class="illustration"
-        src="/assets/landscape.svg"
-        mode="aspectFill"
-      />
     </view>
     <view
       class="notice"

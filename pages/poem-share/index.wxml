@@ -1,5 +1,5 @@
 <view
-  class="page with-action"
+  class="page"
 >
   <view
     class="section-head"
@@ -83,31 +83,7 @@
       </label>
     </checkbox-group>
     <view
-      wx:if="{{busy}}"
       class="notice"
-    >正在合成分享卡，请稍候。</view>
-    <view
-      wx:if="{{error}}"
-      class="error-inline"
-    >{{error}}<button
-        wx:if="{{denied}}"
-        class="text-btn"
-        bindtap="settings"
-      >相册设置</button></view>
+    >当前仅提供卡片预览，你可以使用设备截图功能自行保存。长内容请分段截图，分享前确认已获得适用授权。</view>
   </block>
-  <canvas
-    type="2d"
-    id="shareCanvas"
-    class="export-canvas"
-  />
-  <view
-    wx:if="{{status==='ready'}}"
-    class="bottom-action"
-  >
-    <button
-      class="btn"
-      disabled="{{busy}}"
-      bindtap="save"
-    >{{busy?'正在合成':'保存分享卡'}}</button>
-  </view>
 </view>

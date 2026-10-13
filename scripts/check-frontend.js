@@ -37,7 +37,7 @@ async function behavior(){
  wx.request=opts=>opts.success({statusCode:200,data:{success:false,message:'审核未通过'}});await assert.rejects(()=>request('/students'),/审核未通过/);
  wx.request=opts=>opts.success({statusCode:401,data:{success:false}});await assert.rejects(()=>request('/students'),e=>e.status===401);assert.equal(app.globalData.session,null);assert(!store['shiguang-token']);
  const {wrap}=require('../utils/share');const lines=wrap({measureText:t=>({width:Array.from(t).length*10})},'很长的诗句需要换行\n\n尾行',40);assert.deepEqual(lines,['很长的诗','句需要换','行','','尾行']);
- await require('./check-fields')();await require('./check-session')();await require('./check-roles')();await require('./check-invite-navigation')();await require('./check-idempotency')();
+ await require('./check-fields')();await require('./check-session')();await require('./check-roles')();await require('./check-invite-navigation')();await require('./check-idempotency')();await require('./check-text-only')();
  Object.assign(config,original);mock.reset();console.log('PASS: '+appConfig.pages.length+' 页四件套、JS/JSON语法、WXML标签/事件、组件与静态资源、无emoji、角色权限、记录提交、诗歌生成、三态、真实请求契约、长诗换行');
 }
 behavior().catch(e=>{console.error(e);process.exitCode=1;});

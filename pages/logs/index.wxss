@@ -21,26 +21,6 @@
   overflow: hidden;
 }
 
-.thumb-art {
-  width: 100%;
-  height: 172rpx;
-  margin-top: 24rpx;
-  border-radius: 20rpx;
-}
-
-.upload-grid {
-  display: grid;
-  grid-template-columns: repeat(3,1fr);
-  gap: 20rpx;
-  margin-top: 24rpx;
-}
-
-.thumb {
-  width: 100%;
-  height: 172rpx;
-  border-radius: 20rpx;
-}
-
 /*两页使用一致的暖纸筛选抽屉，选择区独立滚动。*/
 
 .student-filter {

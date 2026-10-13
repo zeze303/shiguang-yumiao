@@ -44,6 +44,10 @@
       {
         "type": "file",
         "value": ".gitignore"
+      },
+      {
+        "type": "file",
+        "value": "拾光育苗_小程序头像.png"
       }
     ],
     "include": []

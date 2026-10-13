@@ -53,7 +53,7 @@
         class="icon"
         src="/assets/icons/shield.svg"
       />
-      <text>分享卡默认隐藏昵称；不包含学校、成长分数或陪伴照片。</text>
+      <text>分享卡默认隐藏昵称；不包含学校、成长分数或陪伴记录。</text>
     </view>
   </block>
   <view
