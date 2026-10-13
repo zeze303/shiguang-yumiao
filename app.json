@@ -1,5 +1,6 @@
 {
   "pages": [
+    "pages/guest/index",
     "pages/bindings/index",
     "pages/poems/index",
     "pages/logs/index",
@@ -14,7 +15,9 @@
     "pages/poem-share/index",
     "pages/log-create/index",
     "pages/log-detail/index",
-    "pages/pairing/index"
+    "pages/pairing/index",
+    "pages/redeem/index",
+    "pages/invite-codes/index"
   ],
   "window": {
     "navigationBarTitleText": "拾光育苗",

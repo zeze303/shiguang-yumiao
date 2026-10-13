@@ -45,9 +45,9 @@ scripts/check-frontend.js       零依赖静态与行为自查
 | 管理孩子 | pages/students/index | 阶段 1 骨架，搜索、筛选、详情 |
 | 管理志愿者 | pages/volunteers/index | 阶段 1 骨架，搜索、结对数量占位 |
 
-15 页已注册，均包含 state-view。提交/生成失败在表单内显示常驻错误，保留选择、正文及图片。AI 局部失败不会隐藏孩子档案。无观察显示缺失文案，图表不补零。陪伴时间轴使用 companion-logs，评分趋势使用 records。
+18 页已注册，均包含 state-view。提交/生成失败在表单内显示常驻错误，保留选择、正文及图片。AI 局部失败不会隐藏孩子档案。无观察显示缺失文案，图表不补零。陪伴时间轴使用 companion-logs，评分趋势使用 records。
 
-微信 app.json 的 tabBar 最多 5 项，因此只注册志愿者四个原生 tab 路由。管理三个顶级普通页面内嵌同一个 role-tabs 组件，使用 reLaunch 切换，管理“我的”复用 profile tab；页面守卫按登录返回的 role 跳正确入口。两角色都显示四项：志愿者“我的结对/成长诗/记录/我的”，管理“总览/孩子/志愿者/我的”。管理普通页面切换会重新请求数据，搜索条件在重新进入时重置；这点需在后续导航体验验收时决定是否保留。
+三级角色：guest 进入 pages/guest/index，只显示项目介绍与公开统计；volunteer/admin 共用“我的结对/成长诗/记录/我的”四项 tab。管理员从“我的”进入管理总览、孩子管理、志愿者管理、邀请码管理。游客深链访问业务页会被角色守卫清理内容并返回游客首页。认证页面为 pages/redeem/index；邀请码管理为 pages/invite-codes/index。
 
 ## Mock 与真实后端切换
 
@@ -94,3 +94,15 @@ request(options.loading=true) 支持并行计数加载；页面常规请求用�
 未修改 backend/ 与 design/ 内容。project.config.json 增加打包排除 backend/design/scripts/文档等，不将后端源码打包进小程序。
 
 审查修复自测：check-frontend.js 已集成 scripts/check-fields.js（真实响应结构脱敏样例）与 scripts/check-session.js（服务器注销、登录竞态、401/403列表清理与网络保留），单次命令运行全部检查。
+
+## 三级身份与邀请码
+
+默认配置保留当前真实基址与 useMock=false，不自动改为演示模式。真实角色由 /login 返回，/redeem 成功后采纳服务器返回的 role，递增会话 epoch、清理旧业务页，再进入相应界面。新账号默认 guest（旧接口文档中的 volunteer 描述以最新后端实现为准）。
+
+游客统计只调用 GET /public/overview，显示孩子数/学校数/记录数。suppressed=true 时显示“数据尚不足以公开”，不展示或推导 averageScores/levelDistribution；公开请求不附带 Bearer。
+
+mock 演示：设置 useMock=true、mockRole=guest 后重新编译。邀请码 DEMO-VOLUNTEER 升为志愿者，DEMO-ADMIN 升为管理员；DEMO-EXPIRED/DEMO-USED 演示过期/已用。邀请状态与角色升级仅在本次模拟会话生效，重编译或注销重置。mockRole 也可设 volunteer/admin 直接验收。生成、列表、作废调用真实接口同一路径的 mock；非 admin 不允许管理邀请码。
+
+认证失败：当前后端将无效/过期/已使用/已作废统一返回400，界面明确列出可能原因并要求向组织核对；409 显示同级或更高无需升级且未消耗码。前端不会伪造更细的后端原因。邀请码管理可选 volunteer/admin、有效天数1–365（留空长期有效），生成与作废均需用户确认，处理中禁止重复提交，失效码不提供作废按钮。
+
+新增 scripts/check-roles.js 已集成 check-frontend.js，覆盖三级权限、游客汇总抑制、认证失败与升级、邀请码创建/列表/作废及camelCase适配。页面完整检查现为18页。仍需微信开发者工具、真机与真实邀请码联调验收。

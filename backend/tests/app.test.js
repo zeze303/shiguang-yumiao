@@ -43,12 +43,14 @@ test('login, scope, session expiry, masking and score responses', async (t) => {
   assert.equal(wxCalls, 0);
   const login = await request('/login', null, { code: 'valid-code' });
   assert.equal(login.status, 200);
-  assert.equal(login.body.data.role, 'volunteer');
+  assert.equal(login.body.data.role, 'guest');
   assert.match(login.body.data.token, /^[a-f0-9]{64}$/);
   assert.deepEqual(Object.keys(login.body.data.profile).sort(), ['avatar', 'id', 'name']);
   const token = login.body.data.token;
   const volunteerId = login.body.data.profile.id;
   const state = JSON.parse(await fs.readFile(path.join(temporary, 'db.json'), 'utf8'));
+  // The remaining regression checks exercise an existing certified volunteer account.
+  state.app_volunteers[0].role = 'volunteer';
   state.growth_students = [
     { id: 'child-1', name: '张小明', phone: '13812345678', guardian_phone: '13912345678', guardian: '家长姓名', address: '河北省某市某县某镇一村1号', home_address: '幸福路12号', note: '私人备注', id_card: '110101201001011234' },
     { id: 'child-2', name: '另一儿童' }

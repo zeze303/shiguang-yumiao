@@ -16,7 +16,7 @@ App({
       .then(session => {
         // 退出或401会递增 epoch，旧登录结果不得写回凭证。
         if(epoch!==this.globalData.sessionEpoch || this.globalData.loggingOut) throw Object.assign(new Error('登录已取消，请重新登录'),{status:401,code:'STALE_SESSION'});
-        if(!session.token || !['volunteer','admin'].includes(session.role)) throw new Error('登录响应缺少有效会话或角色');
+        if(!session.token || !['guest','volunteer','admin'].includes(session.role)) throw new Error('登录响应缺少有效会话或角色');
         wx.setStorageSync('shiguang-token',session.token);
         this.globalData.session=session;this.globalData.role=session.role;this.globalData.profile=session.profile;
         this.globalData.loginRequired=false;
@@ -24,6 +24,13 @@ App({
       }).finally(()=>{if(this.loginTask===task)this.loginTask=null;});
     this.loginTask=task;
     return task;
+  },
+  applyRole(role, epoch) {
+    if (epoch !== this.globalData.sessionEpoch || !this.globalData.session || this.globalData.loggingOut) throw Object.assign(new Error('会话已变更，请重新认证'),{status:401,code:'STALE_SESSION'});
+    if (!['guest','volunteer','admin'].includes(role)) throw new Error('认证响应缺少有效角色，请重新登录确认');
+    require('./utils/page').clearAccountPages('身份已更新，正在进入服务');
+    this.globalData.sessionEpoch++;this.globalData.revision++;this.globalData.logDraft=null;
+    this.globalData.role=role;this.globalData.session={...this.globalData.session,role};
   },
   async logout() {
     if(this.logoutTask)return this.logoutTask;

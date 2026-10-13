@@ -33,17 +33,17 @@ check 逐一执行项目 JS 的 node --check 并检查禁止的 emoji，排除 n
 | IMAGE_MODEL | 默认 gpt-image-2 |
 | WX_CONTENT_SECURITY | 默认 false；设为 true 且微信凭据齐全后启用文本审核 |
 
-在既有 Supabase 库执行 supabase_schema_app.sql；前提是 growth_students.id 为 text，growth_records 已存在。SQL 包含六张 app_* 表的索引、外键、唯一约束、RLS；没有修改 growth_*。本次未执行远程迁移。阶段 2 不需要新增表或列。
+在既有 Supabase 库执行 supabase_schema_app.sql；前提是 growth_students.id 为 text，growth_records 已存在。SQL 包含七张 app_* 表的索引、外键、唯一约束、RLS，以及原子兑换/作废函数；没有修改 growth_*。本次未执行远程迁移。阶段 2 不需要新增表或列。
 
 Supabase URL/密钥同时配置则使用 Supabase，两项都空则使用 backend/data/db.json，只填一项拒绝启动。远程错误直接失败，不静默回退或缓存远程数据。JSON 使用 snake_case 顶层列；API/服务返回 camelCase，JSON content/subscores 内部键保持原样。兼容本地顶层 camelCase 列。JSON 模式使用单进程写队列和临时文件替换，仅用于单进程开发。
 
-JSON 顶层数组：app_volunteers、app_sessions、app_relations、app_companion_logs、app_growth_poems、app_ai_suggestions、growth_students、growth_records。首次登录自动创建 volunteer/active。管理员由数据库手工设置 role=admin。
+JSON 顶层数组：app_volunteers、app_sessions、app_relations、app_companion_logs、app_growth_poems、app_ai_suggestions、app_invite_codes、growth_students、growth_records。首次登录自动创建 guest/active。既有 volunteer/admin 角色不变；管理员可用数据库手工设置或由 admin 邀请码升级。
 
 ## 认证与数据范围
 
 响应统一为 `{ success, data, message? }`，错误 data=null。除 login 外请求均传 `Authorization: Bearer <token>`。token 为随机 32 字节的十六进制字符串，会话有效期 7 天；每次请求重新加载角色和账号状态。logout 删除当前会话，旧 token 立即失效，其他会话不受影响。
 
-志愿者只可访问当前结对孩子；解除结对后所有孩子数据读写、AI 请求均失去权限。陪伴记录 GET 进一步限制为自己的记录。poems 返回当前结对孩子的诗，允许同孩子的协作展示。admin 不受结对范围限制。所有 admin 接口统一 requireAppRole('admin')。
+guest 静默登录默认角色，只能访问公开聚合统计、redeem、登录和注销；学生、记录、陪伴日志、AI、诗及管理接口均 403 并提示“当前为游客身份，请先完成认证”。volunteer 只可访问当前结对孩子；解除结对后所有孩子数据读写、AI 请求均失去权限。陪伴记录 GET 进一步限制为自己的记录。poems 返回当前结对孩子的诗，允许同孩子的协作展示。admin 不受结对范围限制。所有 admin 接口统一 requireAppRole('admin')。
 
 401：未认证/过期；403：禁用/无权限；404：数据不存在；409：重复结对；422：审核拒绝或写诗素材不足；502：模型异常；503：凭据未配置或审核服务异常。
 
@@ -55,6 +55,8 @@ JSON 顶层数组：app_volunteers、app_sessions、app_relations、app_companio
 | --- | --- | --- |
 | POST | /login | `{ code }`，返回 token、role、profile（id/name/avatar） |
 | POST | /logout | 删除当前会话，返回 data=null |
+| GET | /public/overview | 无需登录；只返回孩子/学校/记录数量、四维平均分及等级分布，不返回任何孩子明细 |
+| POST | /redeem | 需登录，`{ code }`；一次性邀请码原子升级为 volunteer/admin。同级或降级兑换拒绝且不消费。 |
 | GET | /students | 当前范围的孩子，含最新四维、等级和预警 |
 | GET | /students/:id | 脱敏详情 |
 | GET | /students/:id/records | 成长记录时间倒序 |
@@ -70,10 +72,17 @@ JSON 顶层数组：app_volunteers、app_sessions、app_relations、app_companio
 | POST | /admin/relations | `{ volunteerId, studentId }`，重复返回 409 |
 | DELETE | /admin/relations/:id | 解除结对，成功 data=null，不存在 404 |
 | GET | /admin/alerts | 最新四维存在预警/高危的孩子及 warnings |
+| POST | /admin/invite-codes | `{ targetRole: "volunteer"|"admin", expiresInDays? }`，生成16位可读随机码 |
+| GET | /admin/invite-codes | 邀请码管理列表 |
+| POST | /admin/invite-codes/:id/revoke | 作废 active 邀请码，used 码不能撤销 |
 
 陪伴记录 type 为 探访/通话/活动/其他，content 为 1..4000 字符，images 可省略（默认 []），最多 9 个 HTTPS URL；不接受带账号密码的 URL。只有服务端认证账号能写 volunteerId。没有图片上传接口，不抓取 images 中的 URL。
 
 列表按 createdAt 降序，再按 period/id 稳定排序。overview 按每个孩子最新一条成长记录计算；无记录不参与平均分、等级分布；volunteerCount 只计 role=volunteer（含 disabled），alertCount 按孩子去重。
+
+邀请码由 app_invite_codes 保存：id、唯一 code、target_role（volunteer/admin）、created_by、used_by（可空）、used_at、expires_at（可空）、status（active/used/revoked）、created_at。兑换时账号和邀请码均加行锁，角色升级与 used 状态在同一事务提交；数据库已有账号角色不会因迁移被重置。管理员列表返回码及使用者信息，创建者始终由已认证 admin 确定。
+
+公开统计的小样本保护由 PUBLIC_OVERVIEW_MIN_SAMPLES 配置，默认5，非法值或小于2时回退5。样本量按具有有效最新四维评分的不同孩子计数，缺失、非有限或越界评分不计入；同孩子多条记录不增加样本。样本不足或任一非空等级单元人数低于阈值时，整组隐藏 averageScores 和 levelDistribution（均为 null），suppressed=true，仅发布孩子总数、学校数、成长记录数。不发布其他等级计数、参与评分人数或隐藏单元数量，避免用互补计数恢复被抑制单元；仅在所有发布条件满足时 suppressed=false。零人数等级不是小单元。
 
 ## 四维与脱敏
 

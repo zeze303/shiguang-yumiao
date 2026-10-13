@@ -63,8 +63,21 @@ function overview(raw, alerts, students, relations) {
     alerts:alerts || (raw.alerts || []).map(s=>student(s,relations)),
     unpaired_count:students ? students.filter(s=>student(s,relations).is_paired===false).length : value(raw,'unpairedCount','unpaired_count',null)};
 }
+function publicOverview(raw) {
+  const suppressed=raw.suppressed===true;
+  return {student_count:value(raw,'studentCount','student_count',0),school_count:value(raw,'schoolCount','school_count',0),record_count:value(raw,'recordCount','record_count',0),suppressed,
+    average_scores:suppressed?null:value(raw,'averageScores','average_scores',null),level_distribution:suppressed?null:value(raw,'levelDistribution','level_distribution',null)};
+}
+function invite(raw) {
+  return {id:raw.id,code:raw.code,target_role:value(raw,'targetRole','target_role',''),created_at:value(raw,'createdAt','created_at',''),expires_at:value(raw,'expiresAt','expires_at',null),used_at:value(raw,'usedAt','used_at',null),used_by:value(raw,'usedBy','used_by',null),status:raw.status};
+}
 const relations = () => request('/admin/relations').then(list).then(rows=>rows.map(relation));
 module.exports = {
+  publicOverview: () => request('/public/overview',{auth:false}).then(publicOverview),
+  redeem: code => request('/redeem',{method:'POST',data:{code:code.trim()}}).then(raw=>({role:raw.role})),
+  inviteCodes: () => request('/admin/invite-codes').then(list).then(rows=>rows.map(invite)),
+  createInviteCode: data => request('/admin/invite-codes',{method:'POST',data}).then(invite),
+  revokeInviteCode: id => request('/admin/invite-codes/'+encodeURIComponent(id)+'/revoke',{method:'POST'}).then(invite),
   logout: () => request('/logout',{method:'POST'}),
   students: () => request('/students').then(list).then(rows=>rows.map(raw=>student(raw))),
   adminStudents: async () => {const [rows,links]=await Promise.all([request('/admin/students').then(list),relations()]);return rows.map(raw=>student(raw,links));},

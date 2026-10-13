@@ -20,7 +20,7 @@ Page({
  dim(e){const dimension=+e.currentTarget.dataset.i;this.setData({dimension,trendText:this.values(this.data.records,dimension),pointNote:'点击节点查看周期分数 · 0–100 分'});charts.draw(this);},
  point(e){const touch=e.changedTouches&&e.changedTouches[0];if(!touch)return;const index=charts.hit(this,touch.x,touch.y);if(index!==null){const record=this.data.records[index],value=record[['psychology','aesthetic','finance','behavior'][this.data.dimension]];this.setData({pointNote:record.period+' · '+this.data.student.dimensions[this.data.dimension].label+' '+value+' 分'});}},
  advice(){ui.navigate('advice',{id:this.id});},
- log(){if(this.data.role==='volunteer')ui.navigate('log-create',{id:this.id});},
+ log(){if(['volunteer','admin'].includes(this.data.role))ui.navigate('log-create',{id:this.id});},
  poem(){if(this.data.poems.length)ui.navigate('poem-detail',{id:this.data.poems[0].id,studentId:this.id});else ui.navigate('poem-generate',{id:this.id});},
  logDetail(e){ui.navigate('log-detail',{id:e.currentTarget.dataset.id,studentId:this.id});},
  contact(){ui.info('跟进联系人','结对志愿者：'+(this.data.student.volunteer_name||'待分配')+'。请通过组织已授权渠道跟进，当前接口没有电话号码。');},

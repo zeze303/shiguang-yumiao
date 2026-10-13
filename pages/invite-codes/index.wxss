@@ -1,0 +1,1 @@
+.code{font-size:30rpx;line-height:48rpx;letter-spacing:2rpx;word-break:break-all;margin:24rpx 0;color:var(--brand-deep)}.result{border:2rpx solid var(--accent-gold-light)}

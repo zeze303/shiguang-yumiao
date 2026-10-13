@@ -9,10 +9,79 @@ create table if not exists public.app_volunteers (
   phone text not null default '',
   avatar text not null default '',
   org text not null default '',
-  role text not null default 'volunteer' check (role in ('volunteer', 'admin')),
+  role text not null default 'guest' check (role in ('guest', 'volunteer', 'admin')),
   status text not null default 'active' check (status in ('active', 'disabled')),
   created_at timestamptz not null default now()
 );
+-- Upgrade existing installs without changing any existing account role.
+alter table public.app_volunteers alter column role set default 'guest';
+alter table public.app_volunteers drop constraint if exists app_volunteers_role_check;
+alter table public.app_volunteers add constraint app_volunteers_role_check check (role in ('guest', 'volunteer', 'admin'));
+
+create table if not exists public.app_invite_codes (
+  id text primary key default gen_random_uuid()::text,
+  code text not null unique,
+  target_role text not null check (target_role in ('volunteer', 'admin')),
+  created_by text not null references public.app_volunteers(id) on delete restrict,
+  used_by text references public.app_volunteers(id) on delete restrict,
+  used_at timestamptz,
+  expires_at timestamptz,
+  status text not null default 'active' check (status in ('active', 'used', 'revoked')),
+  created_at timestamptz not null default now(),
+  check ((status = 'used' and used_by is not null and used_at is not null)
+    or (status in ('active', 'revoked') and used_by is null and used_at is null))
+);
+create index if not exists idx_app_invites_creator on public.app_invite_codes(created_by);
+create index if not exists idx_app_invites_user on public.app_invite_codes(used_by);
+create index if not exists idx_app_invites_created on public.app_invite_codes(created_at desc);
+create index if not exists idx_app_invites_active_expiry on public.app_invite_codes(expires_at) where status = 'active';
+alter table public.app_invite_codes enable row level security;
+revoke all on public.app_invite_codes from anon, authenticated;
+grant all on public.app_invite_codes to service_role;
+
+-- These RPCs run as service_role only. Lock account before invite for a consistent lock order.
+-- Role upgrade and invite consumption commit or roll back together.
+create or replace function public.app_redeem_invite(p_code text, p_volunteer_id text)
+returns jsonb language plpgsql security invoker set search_path = public as $$
+declare
+  account public.app_volunteers%rowtype;
+  invitation public.app_invite_codes%rowtype;
+  current_rank integer;
+  target_rank integer;
+begin
+  select * into account from public.app_volunteers where id = p_volunteer_id for update;
+  if not found or account.status <> 'active' then return jsonb_build_object('error', 'INVITE_FORBIDDEN'); end if;
+  select * into invitation from public.app_invite_codes where code = upper(trim(p_code)) for update;
+  if not found or invitation.status <> 'active' or invitation.used_by is not null or invitation.used_at is not null
+    or (invitation.expires_at is not null and invitation.expires_at <= clock_timestamp()) then
+    return jsonb_build_object('error', 'INVITE_INVALID');
+  end if;
+  current_rank := case account.role when 'guest' then 0 when 'volunteer' then 1 when 'admin' then 2 else 99 end;
+  target_rank := case invitation.target_role when 'volunteer' then 1 when 'admin' then 2 else -1 end;
+  if target_rank <= current_rank then return jsonb_build_object('error', 'INVITE_NO_UPGRADE'); end if;
+  update public.app_volunteers set role = invitation.target_role where id = account.id;
+  update public.app_invite_codes set status = 'used', used_by = account.id, used_at = clock_timestamp() where id = invitation.id;
+  return jsonb_build_object('role', invitation.target_role);
+end;
+$$;
+create or replace function public.app_revoke_invite(p_id text, p_actor_id text)
+returns jsonb language plpgsql security invoker set search_path = public as $$
+declare
+  account public.app_volunteers%rowtype;
+  invitation public.app_invite_codes%rowtype;
+begin
+  select * into account from public.app_volunteers where id = p_actor_id for update;
+  if not found or account.status <> 'active' or account.role <> 'admin' then return jsonb_build_object('error', 'INVITE_FORBIDDEN'); end if;
+  select * into invitation from public.app_invite_codes where id = p_id for update;
+  if not found then return jsonb_build_object('error', 'INVITE_NOT_FOUND'); end if;
+  if invitation.status = 'used' then return jsonb_build_object('error', 'INVITE_ALREADY_USED'); end if;
+  update public.app_invite_codes set status = 'revoked' where id = p_id returning * into invitation;
+  return to_jsonb(invitation);
+end;
+$$;
+revoke all on function public.app_redeem_invite(text, text), public.app_revoke_invite(text, text) from public, anon, authenticated;
+grant execute on function public.app_redeem_invite(text, text), public.app_revoke_invite(text, text) to service_role;
+
 create table if not exists public.app_sessions (
   token text primary key,
   volunteer_id text not null references public.app_volunteers(id) on delete cascade,

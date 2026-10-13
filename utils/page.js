@@ -1,6 +1,6 @@
 function errorMessage(err) { return err && err.message || '暂时没能加载出来，请检查连接后重试'; }
-function home(role) { return '/pages/' + (role === 'admin' ? 'overview' : 'bindings') + '/index'; }
-const empty = {items:[],filtered:[],children:[],records:[],logs:[],poems:[],metrics:[],counts:[0,0,0],menus:[],helpMenus:[],images:[],periods:[],trend:[],student:null,poem:null,item:null,suggestion:null,advice:null,overview:null,basis:null,profile:null,role:null,content:'',studentId:null,initial:'',urgentCount:0,trendText:'',pointNote:'',query:'',filter:'all',error:'',aiError:'',recordsError:'',logsError:'',poemsError:''};
+function home(role) { return '/pages/' + (role === 'guest' ? 'guest' : 'bindings') + '/index'; }
+const empty = {items:[],filtered:[],children:[],records:[],logs:[],poems:[],metrics:[],counts:[0,0,0],menus:[],helpMenus:[],images:[],periods:[],trend:[],student:null,poem:null,item:null,suggestion:null,advice:null,overview:null,basis:null,invite:null,code:'',codes:[],result:null,profile:null,role:null,content:'',studentId:null,initial:'',urgentCount:0,trendText:'',pointNote:'',query:'',filter:'all',error:'',aiError:'',recordsError:'',logsError:'',poemsError:''};
 function clearPage(page,message) {
   if(!page || !page.setData)return;
   const data={status:'error',error:message};
@@ -32,13 +32,14 @@ async function guard(page,roles=['volunteer','admin']) {
   if(app.globalData.loginRequired){clearPage(page,'请重新登录后查看授权范围的数据');toLogin();return false;}
   try {
     const session=await app.ensureSession();
-    if(!roles.includes(session.role)){(session.role==='admin'?wx.reLaunch:wx.switchTab)({url:home(session.role)});return false;}
+    if(!roles.includes(session.role)){clearPage(page,'当前身份没有访问权限');(session.role==='guest'?wx.reLaunch:wx.switchTab)({url:home(session.role)});return false;}
     const accountKey=session.profile && session.profile.id;
     if((page.accountKey!==undefined && page.accountKey!==accountKey) || (page.sessionEpoch!==undefined && page.sessionEpoch!==app.globalData.sessionEpoch))clearPage(page,'');
     page.sessionEpoch=app.globalData.sessionEpoch;page.accountKey=accountKey;page.setData({role:session.role,profile:session.profile});syncTab(page);return true;
   }catch(err){if(!authError(page,err))page.setData({status:'error',error:errorMessage(err)});return false;}
 }
+function enter(role) { (role==='guest'?wx.reLaunch:wx.switchTab)({url:home(role)}); }
 function syncTab(page) {const tab=page.getTabBar && page.getTabBar();if(tab)tab.sync();const inline=page.selectComponent && page.selectComponent('role-tabs');if(inline)inline.sync();}
 function navigate(name,params={}) {wx.navigateTo({url:'/pages/'+name+'/index?'+Object.keys(params).map(k=>k+'='+encodeURIComponent(params[k])).join('&')});}
 function info(title,content) {wx.showModal({title,content,showCancel:false,confirmText:'知道了'});}
-module.exports={guard,syncTab,errorMessage,navigate,info,home,authError,clearPage,clearAccountPages,temporaryError};
+module.exports={guard,syncTab,errorMessage,navigate,info,home,enter,authError,clearPage,clearAccountPages,temporaryError};

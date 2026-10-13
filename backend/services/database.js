@@ -8,7 +8,7 @@ const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (Boolean(url) !== Boolean(key)) throw new Error('SUPABASE_URL 与 SUPABASE_SERVICE_ROLE_KEY 必须同时配置');
 const supabase = url && key ? createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } }) : null;
 let localFile = path.join(__dirname, '..', 'data', 'db.json');
-const tables = ['app_volunteers', 'app_sessions', 'app_relations', 'app_companion_logs', 'app_growth_poems', 'app_ai_suggestions', 'growth_students', 'growth_records'];
+const tables = ['app_volunteers', 'app_sessions', 'app_relations', 'app_companion_logs', 'app_growth_poems', 'app_ai_suggestions', 'app_invite_codes', 'growth_students', 'growth_records'];
 
 // Convert column names only. JSON content/subscores keys belong to their own schemas.
 function toCamel(row) {
@@ -87,7 +87,7 @@ async function findVolunteerById(id) {
 async function findOrCreateVolunteer(openid) {
   const existing = await findVolunteerByOpenid(openid);
   if (existing) return existing;
-  const row = { id: crypto.randomUUID(), openid, name: '', phone: '', avatar: '', org: '', role: 'volunteer', status: 'active', created_at: new Date().toISOString() };
+  const row = { id: crypto.randomUUID(), openid, name: '', phone: '', avatar: '', org: '', role: 'guest', status: 'active', created_at: new Date().toISOString() };
   if (supabase) {
     // Ignore duplicate openid on concurrent logins; never overwrite role/profile.
     const { error } = await supabase.from('app_volunteers').upsert(row, { onConflict: 'openid', ignoreDuplicates: true });
@@ -175,11 +175,83 @@ async function updatePoemCover(id, coverUrl) {
     return row;
   });
 }
+function inviteError(status, code) {
+  return Object.assign(new Error(code), { status, code });
+}
+function normalizeInviteCode(code) { return code.trim().toUpperCase(); }
+async function createInviteCode({ targetRole, createdBy, expiresInDays }) {
+  if (!['volunteer', 'admin'].includes(targetRole) || (expiresInDays !== undefined && (!Number.isInteger(expiresInDays) || expiresInDays < 1 || expiresInDays > 365))) throw inviteError(400, 'INVALID_INVITE');
+  const actor = await findVolunteerById(createdBy);
+  if (!actor || actor.role !== 'admin' || actor.status !== 'active') throw inviteError(403, 'INVITE_FORBIDDEN');
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const code = Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => alphabet[crypto.randomInt(alphabet.length)]).join('')).join('-');
+    const row = { id: crypto.randomUUID(), code, target_role: targetRole, created_by: createdBy, used_by: null, used_at: null, expires_at: expiresInDays === undefined ? null : new Date(Date.now() + expiresInDays * 86400000).toISOString(), status: 'active', created_at: new Date().toISOString() };
+    if (supabase) {
+      const result = await supabase.from('app_invite_codes').insert(row).select().single();
+      if (result.error?.code === '23505') continue;
+      return unwrap(result);
+    }
+    const result = await mutateLocal(state => {
+      if (state.app_invite_codes.some(item => item.code === code)) return null;
+      state.app_invite_codes.push(row);
+      return row;
+    });
+    if (result) return result;
+  }
+  throw inviteError(503, 'INVITE_GENERATION_FAILED');
+}
+async function findInviteCode(code) {
+  return (await select('app_invite_codes', { code: normalizeInviteCode(code) }))[0] || null;
+}
+async function redeemInviteCode(code, volunteerId) {
+  const normalized = normalizeInviteCode(code);
+  if (supabase) {
+    const { data, error } = await supabase.rpc('app_redeem_invite', { p_code: normalized, p_volunteer_id: volunteerId });
+    if (error) throw error;
+    if (data.error) throw inviteError(data.error === 'INVITE_NO_UPGRADE' ? 409 : data.error === 'INVITE_FORBIDDEN' ? 403 : 400, data.error);
+    return data;
+  }
+  // Both mutations are inside one serialized JSON write, matching the Supabase transaction.
+  return mutateLocal(state => {
+    const actor = state.app_volunteers.find(row => row.id === volunteerId);
+    const invite = state.app_invite_codes.find(row => row.code === normalized);
+    if (!actor || actor.status !== 'active') throw inviteError(403, 'INVITE_FORBIDDEN');
+    const value = toCamel(invite);
+    if (!value || value.status !== 'active' || value.usedBy != null || value.usedAt != null || (value.expiresAt != null && (!Number.isFinite(Date.parse(value.expiresAt)) || Date.parse(value.expiresAt) <= Date.now()))) throw inviteError(400, 'INVITE_INVALID');
+    const ranks = { guest: 0, volunteer: 1, admin: 2 };
+    if (!(ranks[value.targetRole] > ranks[actor.role])) throw inviteError(409, 'INVITE_NO_UPGRADE');
+    actor.role = value.targetRole;
+    Object.assign(invite, { used_by: volunteerId, used_at: new Date().toISOString(), status: 'used' });
+    delete invite.usedBy;
+    delete invite.usedAt;
+    return { role: actor.role };
+  });
+}
+async function revokeInviteCode(id, actorId) {
+  if (supabase) {
+    const { data, error } = await supabase.rpc('app_revoke_invite', { p_id: id, p_actor_id: actorId });
+    if (error) throw error;
+    if (data.error) throw inviteError(data.error === 'INVITE_NOT_FOUND' ? 404 : data.error === 'INVITE_FORBIDDEN' ? 403 : 409, data.error);
+    return toCamel(data);
+  }
+  return mutateLocal(state => {
+    const actor = state.app_volunteers.find(row => row.id === actorId);
+    if (!actor || actor.role !== 'admin' || actor.status !== 'active') throw inviteError(403, 'INVITE_FORBIDDEN');
+    const invite = state.app_invite_codes.find(row => row.id === id);
+    if (!invite) throw inviteError(404, 'INVITE_NOT_FOUND');
+    if (invite.status === 'used') throw inviteError(409, 'INVITE_ALREADY_USED');
+    invite.status = 'revoked';
+    return invite;
+  });
+}
 module.exports = {
   mode: supabase ? 'supabase' : 'json', toCamel, toSnake,
   findVolunteerByOpenid, findVolunteerById, findOrCreateVolunteer,
   createSession, findSession, deleteSession, listRelations, hasRelation,
   listStudents, findStudent, listRecords,
+  createInviteCode, findInviteCode, redeemInviteCode, revokeInviteCode,
+  listInviteCodes: async () => (await select('app_invite_codes')).sort(newestFirst),
   listVolunteers: () => select('app_volunteers'),
   createRelation, deleteRelation, updatePoemCover, newestFirst,
   listCompanionLogs: filters => select('app_companion_logs', toSnake(filters || {})),

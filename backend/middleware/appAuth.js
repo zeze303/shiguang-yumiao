@@ -10,7 +10,7 @@ async function appAuth(req, res, next) {
     }
     const volunteer = await db.findVolunteerById(session.volunteerId);
     if (!volunteer) return res.status(401).json({ success: false, data: null, message: '账号不存在' });
-    if (volunteer.status !== 'active' || !['admin', 'volunteer'].includes(volunteer.role)) {
+    if (volunteer.status !== 'active' || !['guest', 'admin', 'volunteer'].includes(volunteer.role)) {
       return res.status(403).json({ success: false, data: null, message: '账号不可用' });
     }
     req.volunteer = volunteer;
@@ -21,7 +21,7 @@ async function appAuth(req, res, next) {
 function requireAppRole(...roles) {
   return (req, res, next) => {
     if (!req.volunteer) return res.status(401).json({ success: false, data: null, message: '请先登录' });
-    if (!roles.includes(req.volunteer.role)) return res.status(403).json({ success: false, data: null, message: '无权访问' });
+    if (!roles.includes(req.volunteer.role)) return res.status(403).json({ success: false, data: null, message: req.volunteer.role === 'guest' ? '当前为游客身份，请先完成认证' : '无权访问' });
     next();
   };
 }

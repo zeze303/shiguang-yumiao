@@ -1,12 +1,27 @@
 const config=require('../config');
 const seed=require('./data');
-let db; function reset(){db=JSON.parse(JSON.stringify(seed));} reset();
+let db, roleOverride=null;
+const role=()=>roleOverride || config.mockRole;
+function reset(){db=JSON.parse(JSON.stringify(seed));roleOverride=null;db.invites=[{id:'demo-volunteer',code:'DEMO-VOLUNTEER',targetRole:'volunteer',status:'active',createdAt:'2026-10-01',expiresAt:null},{id:'demo-admin',code:'DEMO-ADMIN',targetRole:'admin',status:'active',createdAt:'2026-10-01',expiresAt:null},{id:'demo-expired',code:'DEMO-EXPIRED',targetRole:'volunteer',status:'active',createdAt:'2020-01-01',expiresAt:'2020-02-01'},{id:'demo-used',code:'DEMO-USED',targetRole:'volunteer',status:'used',usedBy:'other',usedAt:'2026-10-01',createdAt:'2026-10-01'}];} reset();
 function fail(message,status){const e=new Error(message);e.status=status;throw e;}
-function visible(token){if(!token)fail('登录已过期，请重新登录',401);return config.mockRole==='admin'?db.students:db.students.filter(s=>s.volunteer_id==='v1');}
+function visible(token){if(!token)fail('登录已过期，请重新登录',401);return role()==='admin'?db.students:db.students.filter(s=>s.volunteer_id==='v1');}
 function dispatch(path,{method,data,token}){
- if(path==='/login')return {token:'mock-'+config.mockRole,role:config.mockRole,profile:config.mockRole==='admin'?{id:'admin',name:'青溪项目管理',org:'青溪志愿服务队'}:{id:'v1',name:'林知夏',org:'青溪志愿服务队'}};
+ if(path==='/public/overview'){
+  if(config.mockState==='error')fail('公开数据暂时无法加载，请重试',503);
+  const empty=config.mockState==='empty';return {studentCount:empty?0:5,schoolCount:empty?0:2,recordCount:empty?0:20,averageScores:null,levelDistribution:null,suppressed:true};
+ }
+ if(path==='/login')return {token:'mock-'+role(),role:role(),profile:role()==='admin'?{id:'admin',name:'青溪项目管理',org:'青溪志愿服务队'}:{id:'v1',name:'林知夏',org:'青溪志愿服务队'}};
+ if(path==='/redeem'){
+   if(!token)fail('请重新登录',401);
+   const code=String(data.code||'').trim().toUpperCase(),invite=db.invites.find(i=>i.code===code);
+   if(!invite||invite.status!=='active'||invite.usedBy||invite.expiresAt&&Date.parse(invite.expiresAt)<=Date.now())fail('邀请码不存在、已使用、已过期或已作废',400);
+   if(({guest:0,volunteer:1,admin:2})[invite.targetRole]<=({guest:0,volunteer:1,admin:2})[role()])fail('当前角色无需升级，邀请码未消耗',409);
+   invite.status='used';invite.usedBy='v1';invite.usedAt=new Date().toISOString();roleOverride=invite.targetRole;return {role:role()};
+ }
+ if(path==='/logout'&&method==='POST'){if(!token)fail('请重新登录',401);if(config.mockState==='error')fail('网络暂时中断',503);return null;}
+ if(role()==='guest')fail('当前为游客身份，请先完成认证',403);
  const students=visible(token);const allowed=id=>{const s=students.find(x=>x.id===id);if(!s)fail('当前没有查看权限',403);return s;};
- if(path.startsWith('/admin/')&&config.mockRole!=='admin')fail('当前没有管理权限',403);
+ if(path.startsWith('/admin/')&&role()!=='admin')fail('当前没有管理权限',403);
  if(config.mockState==='error')fail('演示网络暂时中断，请检查连接后重试',503);
  if(config.mockState==='empty'){
    if(path==='/admin/overview')return {student_count:0,volunteer_count:0,average_score:null,alert_count:0,distribution:[],alerts:[],unpaired_count:0,period:''};
@@ -17,10 +32,15 @@ function dispatch(path,{method,data,token}){
  const parts=path.split('/'); const match=parts[1]==='students' && parts[2] && (parts.length===3 || parts.length===4 && parts[3]==='records') ? [path,parts[2],parts[3]] : null;
  if(match){const id=decodeURIComponent(match[1]);const s=allowed(id);if(!match[2])return s;return db.records[id].map((a,i)=>({id:id+'-'+i,student_id:id,period:'2026-'+String(i+7).padStart(2,'0'),psychology:a[0],aesthetic:a[1],finance:a[2],behavior:a[3]})).reverse();}
  if(path==='/poems')return db.poems.filter(p=>students.some(s=>s.id===p.student_id)&&(!data.student_id||p.student_id===data.student_id));
- if(path==='/logout'&&method==='POST')return null;
+ if(path==='/admin/invite-codes'){
+   if(method==='GET')return config.mockState==='empty'?[]:db.invites;
+   if(!['volunteer','admin'].includes(data.targetRole)||data.expiresInDays!==undefined&&(!Number.isInteger(data.expiresInDays)||data.expiresInDays<1||data.expiresInDays>365))fail('身份或有效天数无效',400);
+   const invite={id:'invite-'+Date.now(),code:'DEMO-'+Date.now(),targetRole:data.targetRole,status:'active',createdAt:new Date().toISOString(),expiresAt:data.expiresInDays?new Date(Date.now()+data.expiresInDays*86400000).toISOString():null};db.invites.unshift(invite);return invite;
+ }
+ if(path.startsWith('/admin/invite-codes/')&&path.endsWith('/revoke')){const invite=db.invites.find(i=>i.id===decodeURIComponent(path.split('/')[3]));if(!invite)fail('邀请码不存在',404);if(invite.status==='used')fail('邀请码已使用，无法作废',409);invite.status='revoked';return invite;}
  if(path==='/companion-logs'){
   if(method==='POST'){
-   if(config.mockRole!=='volunteer')fail('管理角色不能提交志愿者记录',403);
+   if(!['volunteer','admin'].includes(role()))fail('当前身份不能提交记录',403);
    data={...data,student_id:data.studentId || data.student_id};const s=allowed(data.student_id);if(!['探访','通话','活动','其他'].includes(data.type)||typeof data.content!=='string'||data.content.trim().length<10||data.content.length>1000||!Array.isArray(data.images)||data.images.length>3)fail('请核对陪伴方式、正文与图片数量',400);
    const log={...data,id:'l'+Date.now(),student_name:s.name,volunteer_name:'林知夏',created_at:new Date().toISOString()};db.logs.unshift(log);s.last=log.created_at.slice(5,10).replace('-','.');return log;
   }

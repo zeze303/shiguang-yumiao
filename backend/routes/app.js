@@ -6,6 +6,8 @@ const { maskStudent, maskPhone, maskAddress, maskIdCard } = require('../services
 const router = express.Router();
 const fail = (res, status, message) => res.status(status).json({ success: false, data: null, message });
 const ok = (res, data) => res.json({ success: true, data });
+const PUBLIC_OVERVIEW_MIN_SAMPLES = Number.isInteger(Number(process.env.PUBLIC_OVERVIEW_MIN_SAMPLES)) && Number(process.env.PUBLIC_OVERVIEW_MIN_SAMPLES) >= 2
+  ? Number(process.env.PUBLIC_OVERVIEW_MIN_SAMPLES) : 5;
 
 router.post('/login', async (req, res) => {
   const code = req.body?.code;
@@ -24,15 +26,62 @@ router.post('/login', async (req, res) => {
   }
   if (typeof result.openid !== 'string' || !result.openid) return fail(res, 502, '微信登录返回异常');
   const volunteer = await db.findOrCreateVolunteer(result.openid);
-  if (!volunteer || volunteer.status !== 'active' || !['volunteer', 'admin'].includes(volunteer.role)) return fail(res, 403, '账号不可用');
+  if (!volunteer || volunteer.status !== 'active' || !['guest', 'volunteer', 'admin'].includes(volunteer.role)) return fail(res, 403, '账号不可用');
   const session = await db.createSession(volunteer.id);
   return ok(res, { token: session.token, role: volunteer.role, profile: { id: volunteer.id, name: volunteer.name, avatar: volunteer.avatar } });
 });
+// Aggregate-only public response: never serialize individual students or records.
+router.get('/public/overview', async (req, res) => {
+  const students = await db.listStudents({ role: 'admin' });
+  const records = await db.listRecords(students.map(student => student.id));
+  const latest = new Map();
+  for (const record of records) if (!latest.has(record.studentId)) latest.set(record.studentId, record);
+  const scored = [...latest.values()].filter(record => {
+    let subscores = record.subscores;
+    if (typeof subscores === 'string') {
+      try { subscores = JSON.parse(subscores); } catch { subscores = null; }
+    }
+    if (scoring.calcFromSubscores(subscores)) return true;
+    return ['psychology', 'aesthetic', 'finance', 'behavior'].every(key => {
+      const value = record[key];
+      return (typeof value === 'number' || (typeof value === 'string' && value.trim() !== '')) && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 100;
+    });
+  });
+  const levelCounts = Object.fromEntries(scoring.LEVELS.map(level => [level.label, 0]));
+  for (const record of scored) levelCounts[scoring.getLevel(scoring.calcOverallFromRecord(record)).label]++;
+  // Suppress all score-derived aggregates if the scored cohort or any non-empty grade cell is small.
+  const smallCell = Object.values(levelCounts).some(count => count > 0 && count < PUBLIC_OVERVIEW_MIN_SAMPLES);
+  const suppressed = scored.length < PUBLIC_OVERVIEW_MIN_SAMPLES || smallCell;
+  let averageScores = null;
+  let levelDistribution = null;
+  if (!suppressed) {
+    const dims = scored.map(scoring.extractDims);
+    averageScores = Object.fromEntries(['psychology', 'aesthetic', 'finance', 'behavior'].map(key => [key, Math.round(dims.reduce((sum, value) => sum + value[key], 0) / dims.length)]));
+    levelDistribution = levelCounts;
+  }
+  return ok(res, { studentCount: students.length, schoolCount: new Set(students.map(student => student.school?.trim()).filter(Boolean)).size, recordCount: records.length, averageScores, levelDistribution, suppressed });
+});
 router.use(appAuth);
+router.post('/redeem', async (req, res) => {
+  const code = req.body?.code;
+  if (typeof code !== 'string' || !code.trim() || code.length > 128) return fail(res, 400, '请输入有效邀请码');
+  try { return ok(res, await db.redeemInviteCode(code, req.volunteer.id)); }
+  catch (error) {
+    if (error.code === 'INVITE_INVALID') return fail(res, 400, '邀请码不存在、已使用、已过期或已作废');
+    if (error.code === 'INVITE_NO_UPGRADE') return fail(res, 409, '当前角色无需升级，邀请码未消耗');
+    throw error;
+  }
+});
 
 router.post('/logout', async (req, res) => {
   await db.deleteSession(req.appToken);
   return ok(res, null);
+});
+
+// Guest accounts retain login/logout and redemption; all child/business routes require certification.
+router.use((req, res, next) => {
+  if (req.volunteer.role === 'guest') return fail(res, 403, '当前为游客身份，请先完成认证');
+  next();
 });
 
 function safeStudent(student) {
@@ -180,6 +229,16 @@ admin.delete('/relations/:id', async (req, res) => {
   if (!validId(req.params.id)) return fail(res, 400, '结对 id 无效');
   if (!await db.deleteRelation(req.params.id)) return fail(res, 404, '结对关系不存在');
   return ok(res, null);
+});
+admin.post('/invite-codes', async (req, res) => {
+  const { targetRole, expiresInDays } = req.body || {};
+  if (!['volunteer', 'admin'].includes(targetRole) || (expiresInDays !== undefined && (!Number.isInteger(expiresInDays) || expiresInDays < 1 || expiresInDays > 365))) return fail(res, 400, 'targetRole 须为 volunteer/admin，expiresInDays 须为1到365的整数');
+  return ok(res, await db.createInviteCode({ targetRole, expiresInDays, createdBy: req.volunteer.id }));
+});
+admin.get('/invite-codes', async (req, res) => ok(res, await db.listInviteCodes()));
+admin.post('/invite-codes/:id/revoke', async (req, res) => {
+  if (!validId(req.params.id)) return fail(res, 400, '邀请码 id 无效');
+  return ok(res, await db.revokeInviteCode(req.params.id, req.volunteer.id));
 });
 admin.get('/alerts', async (req, res) => ok(res, (await allStudentSummaries()).filter(student => student.hasWarning)));
 router.use('/admin', admin);

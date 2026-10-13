@@ -10,7 +10,7 @@ Page({
     this.load();
   },
   async load() {
-    if (!await ui.guard(this, ['volunteer'])) return;
+    if (!await ui.guard(this, ['volunteer','admin'])) return;
     try {
       const children = await api.students();
       const childIndex = Math.max(0, children.findIndex(s => s.id === (this.preselected || this.data.studentId)));
