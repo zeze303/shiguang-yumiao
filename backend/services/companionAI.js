@@ -27,11 +27,11 @@ async function contextFor(student, volunteer, period) {
   if (volunteer.role !== 'admin') logFilters.volunteerId = volunteer.id;
   const [records, logs] = await Promise.all([db.listRecords(student.id), db.listCompanionLogs(logFilters)]);
   const latest = period ? records.find(row => row.period === period) : records[0];
-  const materials = logs.sort(db.newestFirst).slice(0, 10).map(row => ({ type: row.type, content: row.content, createdAt: row.createdAt }));
+  const materials = logs.filter(row => typeof row.content === 'string' && row.content.trim()).sort(db.newestFirst).slice(0, 10).map(row => ({ type: row.type, content: row.content, createdAt: row.createdAt }));
   for (const row of records.slice(0, 3)) {
     if (period && row.period !== period) continue;
     for (const key of ['commentOverall', 'commentPsychology', 'commentAesthetic', 'commentFinance', 'commentBehavior']) {
-      if (row[key]) materials.push({ type: '成长记录', content: row[key], period: row.period });
+      if (typeof row[key] === 'string' && row[key].trim()) materials.push({ type: '成长记录', content: row[key], period: row.period });
     }
   }
   if (!await allowed(materials, volunteer)) throw Object.assign(new Error('记录内容未通过审核'), { status: 422 });
@@ -44,12 +44,27 @@ async function contextFor(student, volunteer, period) {
 async function generateSuggest(student, volunteer) {
   const context = await contextFor(student, volunteer);
   const crisis = context.crisis;
-  const fallback = () => ({ ...FALLBACK, status: FALLBACK.status + (crisis ? ai.CRISIS_GUIDANCE : ''), cautions: crisis ? [...FALLBACK.cautions, ai.CRISIS_GUIDANCE] : [...FALLBACK.cautions] });
-  const summary = await ai.summarizeRecords({ records: context.materials });
+  const fallback = (status = FALLBACK.status) => ({ ...FALLBACK, status: status + (crisis ? ai.CRISIS_GUIDANCE : ''), openers: [...FALLBACK.openers], activities: [...FALLBACK.activities], cautions: crisis ? [...FALLBACK.cautions, ai.CRISIS_GUIDANCE] : [...FALLBACK.cautions] });
+  if (!context.materials.length) return fallback('当前缺少成长记录，建议先补充陪伴记录。请以孩子的实际表达为准。');
+  let summary;
+  let summaryFailed = false;
+  try {
+    summary = await ai.summarizeRecords({ records: context.materials });
+  } catch {
+    // Only the optional summary call degrades; database and security failures still propagate.
+    summaryFailed = true;
+    summary = context.materials.slice(0, 3).map(row => row.content.slice(0, 200));
+  }
   if (!await allowed(summary, volunteer)) return fallback();
   const history = (await db.listAiSuggestions({ studentId: student.id, kind: 'suggest' })).sort(db.newestFirst).slice(0, 3).map(row => row.content);
-  let value = await ai.generateSuggest({ ...context, recentLogs: summary }, history);
-  if (ai.tooSimilar(value, history)) value = await ai.generateSuggest({ ...context, recentLogs: summary }, history.concat([value]));
+  let value;
+  try {
+    value = await ai.generateSuggest({ ...context, recentLogs: summary }, history);
+    if (ai.tooSimilar(value, history)) value = await ai.generateSuggest({ ...context, recentLogs: summary }, history.concat([value]));
+  } catch (error) {
+    if (summaryFailed) return fallback();
+    throw error;
+  }
   if (ai.tooSimilar(value, history)) return fallback();
   if (crisis) {
     value.status += ai.CRISIS_GUIDANCE;
@@ -61,9 +76,12 @@ async function generateSuggest(student, volunteer) {
 }
 async function generatePoem(student, volunteer, period) {
   const context = await contextFor(student, volunteer, period);
-  if (!context.materials.length) throw Object.assign(new Error('暂无可用于写诗的素材，请先添加陪伴记录'), { status: 422 });
-  const value = await ai.generatePoem({ ...context, period });
-  if (!await allowed(value, volunteer)) return { title: '静待成长', content: '本次成长诗暂不可用，请稍后再试。', coverUrl: images.DEFAULT_COVER };
+  if (!context.materials.length) throw Object.assign(new Error('暂无可用于写诗的素材，请先添加陪伴记录'), { status: 422, code: 'NO_POEM_MATERIAL' });
+  const fallback = () => ({ title: '静待成长', content: '本次成长诗暂不可用，请稍后再试。' + (context.crisis ? ai.CRISIS_GUIDANCE : ''), coverUrl: images.DEFAULT_COVER });
+  let value;
+  try { value = await ai.generatePoem({ ...context, period }); }
+  catch { return fallback(); }
+  if (!await allowed(value, volunteer)) return fallback();
   const poem = await db.createGrowthPoem({ studentId: student.id, createdBy: volunteer.id, period, ...value, coverUrl: images.DEFAULT_COVER });
   // Return text immediately; image work is one-shot per persisted poem. No request awaits it.
   setImmediate(() => images.enqueueCover(poem.id, `${value.title}\n${value.content}`, db.updatePoemCover));

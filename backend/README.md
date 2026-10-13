@@ -87,13 +87,13 @@ AI 只传年龄、性别、四维、等级及近10条陪伴记录/近3条成长�
 
 services/ai.js 已按 拾光育苗_AI_Prompt设计_v1.md 换成正式系统和用户文案。建议严格校验 status 字符串、2..3条 openers、3条 activities、2..3条 cautions；统一附 disclaimer="仅供参考，非专业诊断"。诗标题最多8字，正文6..10行。DeepSeek 超时30秒，错误结构不落库。
 
-陪伴建议流程：读取四维/最近记录，输入审核与脱敏；摘要子调用产出2..3句；再取该孩子跨志愿者最近3条建议，追加“避免与以下雷同”；以字符二元组 Dice 相似度 >=0.8 判断过度雷同，最多重生成1次。仍重复或模型输出审核拒绝时返回固定兜底，不落库。审核通过才写 app_ai_suggestions（kind=suggest、model=deepseek-chat）。危机检测使用完整选取素材，在脱敏及每条1500字符截断之前计算独立 crisis 布尔标记；截断不清除此标记。危机词匹配到自伤/极端情绪等时，状态和注意事项加入“建议尽快联系孩子的监护人或老师，共同关注。”，兜底也保留该引导。规则检测不能替代人工判断。
+陪伴建议流程：读取四维/最近记录，输入审核与脱敏；空记录或空白评语不作为素材，无素材直接返回说明“当前缺少成长记录，建议先补充陪伴记录”的兜底，不调用模型、不落库。摘要子调用产出2..3句；摘要失败则用最多3条、每条200字符的已脱敏素材继续生成，若后续生成也失败则返回兜底；所有兜底保留独立危机标记对应引导。再取该孩子跨志愿者最近3条建议，追加“避免与以下雷同”；以字符二元组 Dice 相似度 >=0.8 判断过度雷同，最多重生成1次。仍重复或模型输出审核拒绝时返回固定兜底，不落库。审核通过才写 app_ai_suggestions（kind=suggest、model=deepseek-chat）。危机检测使用完整选取素材，在脱敏及每条1500字符截断之前计算独立 crisis 布尔标记；截断不清除此标记。危机词匹配到自伤/极端情绪等时，状态和注意事项加入“建议尽快联系孩子的监护人或老师，共同关注。”，兜底也保留该引导。规则检测不能替代人工判断。
 
 services/contentSecurity.js 提供 checkText(content, openid)、setChecker(asyncChecker)、resetChecker()。WX_CONTENT_SECURITY=true 且 WX_APPID/WX_SECRET 完整时，缓存微信 access_token 并调用 msg_sec_check v2；文本分段审核，任一段 reject/review/未知结果均拒绝。凭据缺失或开关关闭按阶段要求放行；启用后的网络、token 或接口异常返回503，不放行。真实上线应明确开启并验证。审核点包含陪伴记录入库、AI素材输入、摘要输出、最终建议/诗输出。输出拒绝不落库，返回安全兜底。当前实现为文本审核，图片审核仍需额外接入。
 
 ## 异步封面
 
-POST /ai/poem 先审核文字并写 app_growth_poems，立即返回包含 title/content 的诗记录，另有 id、studentId、period、coverUrl 等字段。初始 coverUrl=/assets/default-poem-cover.svg。无素材返回422；审核拒绝返回静态兜底文字，没有诗 ID，不入库也不生图。
+POST /ai/poem 先审核文字并写 app_growth_poems，立即返回包含 title/content 的诗记录，另有 id、studentId、period、coverUrl 等字段。初始 coverUrl=/assets/default-poem-cover.svg。无素材返回422，并明确提示“暂无可用于写诗的素材，请先添加陪伴记录”；成长诗不调用摘要。模型调用/结构校验失败或审核拒绝返回静态兜底文字，没有诗 ID，不入库也不生图；审核服务和数据库错误仍阻断。
 
 响应后后台调用 IMAGE_API_BASE/images/generations，风格为童趣手绘、暖色、红金协调、无文字无水印。生图超时60秒，失败不影响文字并保留默认封面。成功 URL 更新 cover_url；支持 HTTPS URL 或 b64_json（PNG/JPEG/WebP）保存到 public/assets/generated。前端轮询 GET /poems?student_id=... 并按诗 ID 找 coverUrl，不需要再次调用 AI。一次 POST 是新诗；同诗 ID 进行中任务去重，不受缓存淘汰影响。完成去重缓存最多1024条、TTL为24小时，入队和任务结束时清理过期项并淘汰最旧项；过期或淘汰后再次显式入队允许生成。GET 永不触发生图，已保存封面复用。
 

@@ -18,7 +18,8 @@ function createApp() {
     // Do not log provider URLs, query strings, tokens or request bodies.
     if (status === 500) console.error('请求处理失败', { name: error.name || 'Error', code: error.code || 'INTERNAL_ERROR' });
     const messages = { 400: '请求格式错误', 403: '无权访问', 404: '数据不存在', 409: '结对关系已存在', 413: '请求内容过大', 422: '内容未通过审核或素材不足', 502: '生成服务暂不可用', 503: '服务未配置或暂不可用' };
-    res.status(status).json({ success: false, data: null, message: messages[status] || '服务暂不可用' });
+    const message = status === 422 && error.code === 'NO_POEM_MATERIAL' ? '暂无可用于写诗的素材，请先添加陪伴记录' : messages[status] || '服务暂不可用';
+    res.status(status).json({ success: false, data: null, message });
   });
   return app;
 }
