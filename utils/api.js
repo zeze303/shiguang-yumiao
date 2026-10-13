@@ -1,4 +1,5 @@
 const request = require('./request');
+const config = require('../config');
 const fields = ['psychology','aesthetic','finance','behavior'];
 const labels = ['心理','美育','财商','行为'];
 const colors = ['#6b4c8a','#c0392b','#d4a74a','#2d7d46'];
@@ -47,9 +48,19 @@ function log(raw) {
     student_name:value(raw,'studentName','student_name',''), volunteer_name:value(raw,'volunteerName','volunteer_name',''),
     created_at:value(raw,'createdAt','created_at',''), images:Array.isArray(raw.images)?raw.images:[]};
 }
+function coverURL(path) {
+  if (typeof path !== 'string' || !path) return '';
+  if (config.useMock || /^https?:\/\//i.test(path)) return path;
+  if (path.startsWith('/')) {
+    // 使用后端 origin，不把 /api/app 作为静态文件前缀；兼容小程序无 URL 构造器的运行时。
+    const origin = config.baseURL.match(/^https?:\/\/[^/?#]+/i);
+    return origin ? origin[0] + path : '';
+  }
+  return '';
+}
 function poem(raw) {
   return {...raw, student_id:value(raw,'studentId','student_id',null), student_name:value(raw,'studentName','student_name',''),
-    created_at:value(raw,'createdAt','created_at',''), created_by:value(raw,'createdBy','created_by',null), cover_url:value(raw,'coverUrl','cover_url','')};
+    created_at:value(raw,'createdAt','created_at',''), created_by:value(raw,'createdBy','created_by',null), cover_url:coverURL(value(raw,'coverUrl','cover_url',''))};
 }
 function volunteer(raw) {
   return {...raw, created_at:value(raw,'createdAt','created_at',''), relation_count:value(raw,'relationCount','relation_count',0)};
