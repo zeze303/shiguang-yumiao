@@ -91,20 +91,41 @@
       disabled="{{busy}}"
     >刷新</button>
   </view>
+  <scroll-view
+    wx:if="{{role==='admin'}}"
+    class="invite-tabs"
+    scroll-x="{{true}}"
+    enhanced="{{true}}"
+    show-scrollbar="{{false}}"
+  >
+    <view class="invite-tabs-inner">
+      <button
+        wx:for="{{tabs}}"
+        wx:key="state"
+        class="invite-tab {{filter===item.state?'active':''}}"
+        data-state="{{item.state}}"
+        bindtap="filterTab"
+      >{{item.label}} {{item.count}}</button>
+    </view>
+  </scroll-view>
   <state-view
     status="{{status}}"
-    title="{{status==='empty'?'还没有邀请码':''}}"
-    message="{{error || '选择身份与有效期后生成第一个邀请码。'}}"
-    actionText="{{status==='empty'?'生成邀请码':'重试'}}"
+    title="{{status==='empty' && !items.length ? '还没有邀请码' : status==='empty' ? '当前筛选下没有邀请码' : ''}}"
+    message="{{error || (status==='empty' && !items.length ? '选择身份与有效期后生成第一个邀请码。' : '切换其他状态或生成新的邀请码。')}}"
+    actionText="{{status==='empty' && !items.length ? '生成邀请码' : '重试'}}"
     bind:retry="load"
     bind:action="generate"
   />
   <view
-    wx:if="{{role==='admin' && status==='ready'}}"
+    wx:if="{{role==='admin' && status==='ready' && !visibleItems.length}}"
+    class="invite-filter-empty"
+  >当前筛选下没有邀请码，请切换其他状态。</view>
+  <view
+    wx:if="{{role==='admin' && status==='ready' && visibleItems.length}}"
     class="stack"
   >
     <view
-      wx:for="{{items}}"
+      wx:for="{{visibleItems}}"
       wx:key="id"
       class="card"
     >
@@ -141,5 +162,7 @@
         >作废邀请码</button>
       </view>
     </view>
+    <view wx:if="{{pageStatus==='loading'}}" class="invite-page-status">正在加载更多</view>
+    <view wx:elif="{{pageStatus==='done' && visibleItems.length}}" class="invite-page-status">没有更多了</view>
   </view>
 </view>

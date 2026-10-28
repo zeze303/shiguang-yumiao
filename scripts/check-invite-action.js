@@ -82,6 +82,33 @@ module.exports = async function checkInviteAction() {
     assert(wxml.includes('bindtap="generate"'));
     assert(wxml.includes('hover-class="button-hover"'));
     assert(wxml.includes('disabled="{{busy}}"'));
+
+    const paginationPage = {
+      ...definition,
+      data: {
+        ...definition.data,
+        items: Array.from({ length: 45 }, (_, index) => ({ id: String(index), state: index < 25 ? 'active' : 'used' })),
+        filter: 'active',
+        page: 1,
+        pageSize: 20,
+        visibleItems: [],
+        pageStatus: 'done'
+      },
+      setData(value) {
+        Object.assign(this.data, value);
+      }
+    };
+    paginationPage.resetView();
+    assert.equal(paginationPage.data.visibleItems.length, 20);
+    assert.equal(paginationPage.data.pageStatus, 'more');
+    paginationPage.loadMore();
+    assert.equal(paginationPage.data.visibleItems.length, 25);
+    assert.equal(paginationPage.data.pageStatus, 'done');
+    paginationPage.filterTab({ currentTarget: { dataset: { state: 'used' } } });
+    assert.equal(paginationPage.data.page, 1);
+    assert.equal(paginationPage.data.visibleItems.length, 20);
+    assert.equal(paginationPage.data.tabs.find((tab) => tab.state === 'active').count, 25);
+    assert.equal(paginationPage.data.tabs.find((tab) => tab.state === 'used').count, 20);
     console.log('PASS: number days、权限失败、busy、目标身份异常、请求异常、点击绑定与视觉反馈');
   } finally {
     ui.guard = original.guard;

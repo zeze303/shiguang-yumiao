@@ -25,6 +25,18 @@ Page({
   data: {
     status: 'loading',
     items: [],
+    visibleItems: [],
+    filter: 'active',
+    tabs: [
+      { state: 'all', label: '全部', count: 0 },
+      { state: 'active', label: '可用', count: 0 },
+      { state: 'used', label: '已使用', count: 0 },
+      { state: 'expired', label: '已过期', count: 0 },
+      { state: 'revoked', label: '已作废', count: 0 }
+    ],
+    page: 1,
+    pageSize: 20,
+    pageStatus: 'done',
     targetIndex: 0,
     targets: [
       { role: 'volunteer', label: '志愿者' },
@@ -36,8 +48,11 @@ Page({
     result: null
   },
   onLoad() {
-    this.setData({ busy: false, error: '', result: null });
+    this.setData({ busy: false, error: '', result: null, filter: 'active', page: 1 });
     this.load();
+  },
+  onReachBottom() {
+    this.loadMore();
   },
   onUnload() {
     this.unloaded = true;
@@ -50,8 +65,10 @@ Page({
     try {
       if (!(await ui.guard(this, ['admin'])) || this.unloaded) return;
       const items = (await api.inviteCodes()).map(present);
-      if (!this.unloaded)
+      if (!this.unloaded) {
         this.setData({ items, status: items.length ? 'ready' : 'empty', error: '' });
+        this.resetView();
+      }
     } catch (e) {
       if (this.unloaded || ui.authError(this, e)) return;
       this.setData({ items: [], status: 'error', error: ui.errorMessage(e) });
@@ -59,6 +76,46 @@ Page({
       this.loading = false;
       if (!this.unloaded) this.setData({ loading: false });
     }
+  },
+  resetView() {
+    const source = this.data.filter === 'all'
+      ? this.data.items
+      : this.data.items.filter((item) => item.state === this.data.filter);
+    const page = Math.max(1, this.data.page || 1);
+    const visibleItems = source.slice(0, page * this.data.pageSize);
+    const tabs = ['all', 'active', 'used', 'expired', 'revoked'].map((state) => ({
+      state,
+      label: { all: '全部', active: '可用', used: '已使用', expired: '已过期', revoked: '已作废' }[state],
+      count: state === 'all' ? this.data.items.length : this.data.items.filter((item) => item.state === state).length
+    }));
+    this.setData({
+      tabs,
+      visibleItems,
+      page,
+      pageStatus: source.length > visibleItems.length ? 'more' : source.length ? 'done' : 'empty'
+    });
+  },
+  filterTab(e) {
+    const filter = e.currentTarget.dataset.state;
+    this.setData({ filter, page: 1 });
+    this.resetView();
+    if (typeof wx.pageScrollTo === 'function') wx.pageScrollTo({ scrollTop: 0, duration: 0 });
+  },
+  loadMore() {
+    if (this.data.pageStatus !== 'more' || this.loadingMore) return;
+    this.loadingMore = true;
+    this.setData({ pageStatus: 'loading' });
+    const source = this.data.filter === 'all'
+      ? this.data.items
+      : this.data.items.filter((item) => item.state === this.data.filter);
+    const page = this.data.page + 1;
+    const visibleItems = source.slice(0, page * this.data.pageSize);
+    this.setData({
+      visibleItems,
+      page,
+      pageStatus: source.length > visibleItems.length ? 'more' : 'done'
+    });
+    this.loadingMore = false;
   },
   target(e) {
     this.setData({ targetIndex: +e.detail.value });
