@@ -129,7 +129,7 @@ Page({
       wx.showModal({
         title: '确认生成邀请码',
         content: '此邀请码可授予' + target.label + '身份，请仅交给获得组织授权的人。',
-        confirmText: '生成邀请码',
+        confirmText: '确认生成',
         success: (result) => {
           console.log('[invite-codes] generate:showModal-success', {
             confirm: !!(result && result.confirm),
@@ -220,7 +220,7 @@ Page({
       wx.showModal({
         title: '作废邀请码',
       content: '将作废 ' + item.code + '，此操作后该码不能用于认证。',
-        confirmText: '作废邀请码',
+        confirmText: '确认作废',
         success: (r) => {
           if (r.confirm) this.confirmRevoke(item.id);
         }
