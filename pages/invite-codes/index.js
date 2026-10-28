@@ -36,6 +36,7 @@ Page({
     result: null
   },
   onLoad() {
+    this.setData({ busy: false, error: '', result: null });
     this.load();
   },
   onUnload() {
@@ -65,29 +66,65 @@ Page({
     this.setData({ days: e.detail.value });
   },
   async generate() {
-    if (this.data.busy || !(await ui.guard(this, ['admin'])) || this.data.busy) return;
-    const days = this.data.days.trim();
-    if (days && (!Number.isInteger(Number(days)) || Number(days) < 1 || Number(days) > 365)) {
-      this.setData({ error: '有效天数须为1至365的整数，留空表示长期有效。' });
+    if (this.data.busy) {
+      this.notify('请稍候，上一项操作仍在处理中。');
       return;
     }
-    const targetRole = this.data.targets[this.data.targetIndex].role;
-    wx.showModal({
-      title: '确认生成邀请码',
-      content:
-        '此邀请码可授予' +
-        this.data.targets[this.data.targetIndex].label +
-        '身份，请仅交给获得组织授权的人。',
-      confirmText: '生成邀请码',
-      success: (r) => {
-        if (r.confirm) this.create(targetRole, days);
+    try {
+      const allowed = await ui.guard(this, ['admin']);
+      if (!allowed) {
+        this.notify('当前身份无权限或登录状态异常，请重新进入。');
+        return;
       }
-    });
+      if (this.data.busy) {
+        this.notify('请稍候，上一项操作仍在处理中。');
+        return;
+      }
+      const days = String(this.data.days ?? '').trim();
+      if (days && (!Number.isInteger(Number(days)) || Number(days) < 1 || Number(days) > 365)) {
+        this.setData({ error: '有效天数须为1至365的整数，留空表示长期有效。' });
+        this.notify('请检查有效天数。');
+        return;
+      }
+      const targetIndex = Number(this.data.targetIndex);
+      const target = Number.isInteger(targetIndex) ? this.data.targets[targetIndex] : null;
+      if (!target) {
+        this.setData({ error: '请选择有效的目标身份。' });
+        this.notify('请选择有效的目标身份。');
+        return;
+      }
+      wx.showModal({
+        title: '确认生成邀请码',
+        content: '此邀请码可授予' + target.label + '身份，请仅交给获得组织授权的人。',
+        confirmText: '生成邀请码',
+        success: (r) => {
+          if (r.confirm) this.create(target.role, days);
+        }
+      });
+    } catch (e) {
+      if (ui.authError(this, e)) return;
+      this.setData({ error: ui.errorMessage(e) });
+      this.notify(ui.errorMessage(e));
+    }
+  },
+  notify(message) {
+    wx.showToast({ title: String(message).slice(0, 32), icon: 'none', duration: 2400 });
   },
   async create(targetRole, days) {
-    if (this.data.busy || !(await ui.guard(this, ['admin'])) || this.data.busy) return;
-    this.setData({ busy: true, error: '' });
+    if (this.data.busy) {
+      this.notify('请稍候，上一项操作仍在处理中。');
+      return;
+    }
     try {
+      if (!(await ui.guard(this, ['admin']))) {
+        this.notify('当前身份无权限或登录状态异常，请重新进入。');
+        return;
+      }
+      if (this.data.busy) {
+        this.notify('请稍候，上一项操作仍在处理中。');
+        return;
+      }
+      this.setData({ busy: true, error: '' });
       const data = { targetRole };
       if (days) data.expiresInDays = Number(days);
       const result = present(await api.createInviteCode(data));
@@ -96,6 +133,7 @@ Page({
     } catch (e) {
       if (ui.authError(this, e)) return;
       this.setData({ error: ui.errorMessage(e) });
+      this.notify(ui.errorMessage(e));
     } finally {
       this.setData({ busy: false });
     }
@@ -105,28 +143,60 @@ Page({
     if (code) wx.setClipboardData({ data: code });
   },
   async revoke(e) {
-    if (this.data.busy || !(await ui.guard(this, ['admin'])) || this.data.busy) return;
-    const item = this.data.items.find((i) => i.id === e.currentTarget.dataset.id);
-    if (!item || item.state !== 'active') return;
-    wx.showModal({
-      title: '作废邀请码',
-      content: '将作废 ' + item.code + '，此操作后该码不能用于认证。',
-      confirmText: '作废邀请码',
-      success: (r) => {
-        if (r.confirm) this.confirmRevoke(item.id);
+    if (this.data.busy) {
+      this.notify('请稍候，上一项操作仍在处理中。');
+      return;
+    }
+    try {
+      if (!(await ui.guard(this, ['admin']))) {
+        this.notify('当前身份无权限或登录状态异常，请重新进入。');
+        return;
       }
-    });
+      if (this.data.busy) {
+        this.notify('请稍候，上一项操作仍在处理中。');
+        return;
+      }
+      const item = this.data.items.find((i) => i.id === e.currentTarget.dataset.id);
+      if (!item || item.state !== 'active') {
+        this.notify('该邀请码已不可作废。');
+        return;
+      }
+      wx.showModal({
+        title: '作废邀请码',
+      content: '将作废 ' + item.code + '，此操作后该码不能用于认证。',
+        confirmText: '作废邀请码',
+        success: (r) => {
+          if (r.confirm) this.confirmRevoke(item.id);
+        }
+      });
+    } catch (e) {
+      if (ui.authError(this, e)) return;
+      this.setData({ error: ui.errorMessage(e) });
+      this.notify(ui.errorMessage(e));
+    }
   },
   async confirmRevoke(id) {
-    if (this.data.busy || !(await ui.guard(this, ['admin'])) || this.data.busy) return;
-    this.setData({ busy: true, error: '' });
+    if (this.data.busy) {
+      this.notify('请稍候，上一项操作仍在处理中。');
+      return;
+    }
     try {
+      if (!(await ui.guard(this, ['admin']))) {
+        this.notify('当前身份无权限或登录状态异常，请重新进入。');
+        return;
+      }
+      if (this.data.busy) {
+        this.notify('请稍候，上一项操作仍在处理中。');
+        return;
+      }
+      this.setData({ busy: true, error: '' });
       await api.revokeInviteCode(id);
       if (this.data.result && this.data.result.id === id) this.setData({ result: null });
       await this.load();
     } catch (e) {
       if (ui.authError(this, e)) return;
       this.setData({ error: ui.errorMessage(e) });
+      this.notify(ui.errorMessage(e));
     } finally {
       this.setData({ busy: false });
     }

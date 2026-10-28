@@ -30,6 +30,14 @@
         "value": "scripts"
       },
       {
+        "type": "folder",
+        "value": "docs"
+      },
+      {
+        "type": "folder",
+        "value": "_dev"
+      },
+      {
         "type": "suffix",
         "value": ".md"
       },
@@ -44,10 +52,6 @@
       {
         "type": "file",
         "value": ".gitignore"
-      },
-      {
-        "type": "file",
-        "value": "拾光育苗_小程序头像.png"
       }
     ],
     "include": []

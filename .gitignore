@@ -3,19 +3,19 @@
 .env.*
 !.env.example
 .hanako-context.md
-*_审查记录.md
+docs/*_审查记录.md
 
 # === 内部资料（按需公开，想传就删掉对应行）===
-拾光育苗_参赛方案_v1.md
-拾光育苗_后端接口文档_v1.md
-拾光育苗_AI_Prompt设计_v1.md
+docs/拾光育苗_参赛方案_v1.md
+docs/拾光育苗_后端接口文档_v1.md
+docs/拾光育苗_后端接口文档_v2.md
+docs/拾光育苗_AI_Prompt设计_v1.md
 
-# === 临时脚本与中间产物 ===
-_make_icon.py
-_img_probe.txt
-_img.json
+# === 开发临时文件与素材 ===
+_dev/
 _*.py
 _*.txt
+_img.json
 
 # === 依赖与构建产物 ===
 node_modules/

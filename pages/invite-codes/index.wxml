@@ -47,6 +47,7 @@
     <button
       class="btn full"
       disabled="{{busy}}"
+      hover-class="button-hover"
       bindtap="generate"
     >{{busy?'正在处理':'生成邀请码'}}</button>
   </view>
