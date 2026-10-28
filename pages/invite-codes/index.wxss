@@ -28,6 +28,10 @@
 }
 
 .invite-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   flex: none;
   min-height: 72rpx;
   padding: 0 24rpx;
@@ -36,7 +40,7 @@
   background: var(--surface-paper);
   color: var(--text-secondary);
   font-size: 24rpx;
-  line-height: 40rpx;
+  line-height: 1;
   text-align: center;
 }
 
