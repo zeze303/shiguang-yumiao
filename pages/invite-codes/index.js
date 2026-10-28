@@ -41,6 +41,7 @@ Page({
   },
   onUnload() {
     this.unloaded = true;
+    this.modalOpen = false;
   },
   async load() {
     if (this.loading) return;
@@ -66,22 +67,43 @@ Page({
     this.setData({ days: e.detail.value });
   },
   async generate() {
+    console.log('[invite-codes] generate:enter', {
+      busy: !!this.data.busy,
+      loading: !!this.data.loading,
+      modalOpen: !!this.modalOpen
+    });
     if (this.data.busy) {
+      console.warn('[invite-codes] generate:blocked-busy');
       this.notify('请稍候，上一项操作仍在处理中。');
       return;
     }
     try {
       const allowed = await ui.guard(this, ['admin']);
+      const session = getApp().globalData.session;
+      console.log('[invite-codes] generate:guard', {
+        allowed: !!allowed,
+        role: session && session.role,
+        loginRequired: !!getApp().globalData.loginRequired
+      });
       if (!allowed) {
         this.notify('当前身份无权限或登录状态异常，请重新进入。');
         return;
       }
       if (this.data.busy) {
+        console.warn('[invite-codes] generate:blocked-busy-after-guard');
         this.notify('请稍候，上一项操作仍在处理中。');
         return;
       }
-      const days = String(this.data.days ?? '').trim();
-      if (days && (!Number.isInteger(Number(days)) || Number(days) < 1 || Number(days) > 365)) {
+      const rawDays = this.data.days;
+      const days = String(rawDays ?? '').trim();
+      console.log('[invite-codes] generate:days', {
+        rawType: typeof rawDays,
+        rawValue: rawDays,
+        normalized: days
+      });
+      const validDays = !days || (Number.isInteger(Number(days)) && Number(days) >= 1 && Number(days) <= 365);
+      console.log('[invite-codes] generate:validation', { validDays });
+      if (!validDays) {
         this.setData({ error: '有效天数须为1至365的整数，留空表示长期有效。' });
         this.notify('请检查有效天数。');
         return;
@@ -89,26 +111,60 @@ Page({
       const targetIndex = Number(this.data.targetIndex);
       const target = Number.isInteger(targetIndex) ? this.data.targets[targetIndex] : null;
       if (!target) {
+        console.warn('[invite-codes] generate:invalid-target', { targetIndex });
         this.setData({ error: '请选择有效的目标身份。' });
         this.notify('请选择有效的目标身份。');
         return;
       }
+      if (this.modalOpen) {
+        console.warn('[invite-codes] generate:blocked-modal-open');
+        this.notify('已有确认框打开，请先完成当前操作。');
+        return;
+      }
+      this.modalOpen = true;
+      console.log('[invite-codes] generate:before-showModal', {
+        targetRole: target.role,
+        targetLabel: target.label
+      });
       wx.showModal({
         title: '确认生成邀请码',
         content: '此邀请码可授予' + target.label + '身份，请仅交给获得组织授权的人。',
         confirmText: '生成邀请码',
-        success: (r) => {
-          if (r.confirm) this.create(target.role, days);
+        success: (result) => {
+          console.log('[invite-codes] generate:showModal-success', {
+            confirm: !!(result && result.confirm),
+            cancel: !!(result && result.cancel)
+          });
+          if (result && result.confirm) this.create(target.role, days);
+        },
+        fail: (error) => {
+          console.error('[invite-codes] generate:showModal-fail', error && error.errMsg);
+          this.setData({ error: '确认框打开失败，请重试。' });
+          this.notify('确认框打开失败，请重试。');
+        },
+        complete: () => {
+          console.log('[invite-codes] generate:showModal-complete');
+          this.modalOpen = false;
         }
       });
-    } catch (e) {
-      if (ui.authError(this, e)) return;
-      this.setData({ error: ui.errorMessage(e) });
-      this.notify(ui.errorMessage(e));
+    } catch (error) {
+      console.error('[invite-codes] generate:exception', error);
+      this.modalOpen = false;
+      if (ui.authError(this, error)) {
+        this.notify('当前身份无权限或登录状态异常，请重新进入。');
+        return;
+      }
+      const message = ui.errorMessage(error);
+      this.setData({ error: message });
+      this.notify(message);
     }
   },
   notify(message) {
-    wx.showToast({ title: String(message).slice(0, 32), icon: 'none', duration: 2400 });
+    try {
+      wx.showToast({ title: String(message).slice(0, 32), icon: 'none', duration: 2400 });
+    } catch (error) {
+      console.warn('[invite-codes] notify-fail', error);
+    }
   },
   async create(targetRole, days) {
     if (this.data.busy) {

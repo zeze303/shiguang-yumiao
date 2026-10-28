@@ -16,11 +16,13 @@ module.exports = async function checkInviteAction() {
     showToast: wx.showToast
   };
   let modal = 0;
+  let modalOptions;
   let toast = '';
   try {
     ui.guard = async () => true;
-    wx.showModal = () => {
+    wx.showModal = (options) => {
       modal += 1;
+      modalOptions = options;
     };
     wx.showToast = (options) => {
       toast = options.title;
@@ -35,6 +37,9 @@ module.exports = async function checkInviteAction() {
     await page.generate();
     assert.equal(modal, 1, 'number 类型 days 也必须进入确认弹窗');
     assert.equal(toast, '');
+    assert(modalOptions && typeof modalOptions.fail === 'function');
+    assert(modalOptions && typeof modalOptions.complete === 'function');
+    modalOptions.complete();
 
     page.data.days = 'bad';
     await page.generate();
@@ -58,6 +63,12 @@ module.exports = async function checkInviteAction() {
 
     page.data.targetIndex = 0;
     page.data.busy = false;
+    modalOptions = null;
+    await page.generate();
+    assert.equal(modal, 2);
+    modalOptions.fail({ errMsg: 'showModal:fail mocked' });
+    modalOptions.complete();
+    assert.equal(toast, '确认框打开失败，请重试。');
     api.createInviteCode = async () => {
       throw new Error('生成请求失败');
     };
