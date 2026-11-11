@@ -16,7 +16,8 @@ Page({
     error: ''
   },
   lastLoadAt: 0,
-  onShow() {
+  async onShow() {
+    if (!(await ui.guard(this, ['volunteer', 'admin']))) return;
     const cached = cache.get(KEY);
     if (cached) this.applyData(cached);
     if (cached && Date.now() - this.lastLoadAt < TTL) return;
@@ -34,7 +35,7 @@ Page({
   preventMove() {},
   async load(force) {
     if (!(await ui.guard(this, ['volunteer', 'admin']))) return;
-    if (!force && this.data.items.length && Date.now() - this.lastLoadAt < TTL) return;
+    if (!force && cache.get(KEY) && Date.now() - this.lastLoadAt < TTL) return;
     try {
       const [items, children] = await Promise.all([api.logs(), api.students()]);
       const data = {

@@ -7,8 +7,9 @@ const TTL = 60000;
 Page({
   data: { status: 'loading', student: null, suggestion: null, busy: false, error: '' },
   lastLoadAt: 0,
-  onLoad(q) {
+  async onLoad(q) {
     this.id = q.id;
+    if (!(await ui.guard(this))) return;
     const key = this.cacheKey();
     const cached = key ? cache.get(key) : null;
     if (cached) this.applyCached(cached);
@@ -32,7 +33,7 @@ Page({
       this.setData({ status: 'empty' });
       return;
     }
-    if (!force && this.data.suggestion && Date.now() - this.lastLoadAt < TTL) return;
+    if (!force && this.data.suggestion && this.cacheKey() && cache.get(this.cacheKey()) && Date.now() - this.lastLoadAt < TTL) return;
     this.setData({ busy: true });
     try {
       const [student, suggestion] = await Promise.all([

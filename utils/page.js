@@ -47,6 +47,7 @@ const empty = {
 };
 function clearPage(page, message) {
   if (!page || !page.setData) return;
+  page.lastLoadAt = 0;
   const data = { status: 'error', error: message };
   for (const key of Object.keys(empty))
     if (page.data && Object.prototype.hasOwnProperty.call(page.data, key)) data[key] = empty[key];
@@ -55,6 +56,7 @@ function clearPage(page, message) {
   page.accountKey = undefined;
 }
 function clearAccountPages(message) {
+  require('./cache').clear();
   const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
   pages.forEach((page) => clearPage(page, message));
 }

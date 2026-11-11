@@ -25,7 +25,8 @@ Page({
   onLoad(q) {
     this.id = q.id;
   },
-  onShow() {
+  async onShow() {
+    if (!(await ui.guard(this))) return;
     const key = this.cacheKey();
     const cached = key ? cache.get(key) : null;
     if (cached) this.applyCached(cached);
@@ -47,7 +48,7 @@ Page({
       this.setData({ status: 'empty', error: '请从结对或孩子列表选择档案。' });
       return;
     }
-    if (!force && this.data.student && Date.now() - this.lastLoadAt < TTL) return;
+    if (!force && this.cacheKey() && cache.get(this.cacheKey()) && this.data.student && Date.now() - this.lastLoadAt < TTL) return;
     try {
       const student = await api.student(this.id);
       this.lastLoadAt = Date.now();
