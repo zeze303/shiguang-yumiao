@@ -105,6 +105,11 @@ create table if not exists public.app_companion_logs (
   images jsonb not null default '[]'::jsonb check (jsonb_typeof(images) = 'array'),
   created_at timestamptz not null default now()
 );
+-- Existing installations: execute these two statements before deploying the backend.
+alter table public.app_companion_logs add column if not exists idempotency_key text;
+create unique index if not exists idx_app_logs_volunteer_idempotency
+  on public.app_companion_logs(volunteer_id, idempotency_key);
+
 create table if not exists public.app_growth_poems (
   id text primary key default gen_random_uuid()::text,
   student_id text not null references public.growth_students(id) on delete cascade,

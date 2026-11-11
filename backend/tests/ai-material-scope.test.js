@@ -23,8 +23,8 @@ test('AI materials respect own logs during shared pairing and handoff; late cris
     growth_students: [{ id: 's', name: '某儿童' }],
     app_relations: ['a', 'b'].map(id => ({ id, volunteer_id: id, student_id: 's' })),
     app_companion_logs: [
-      { id: 'la', volunteer_id: 'a', student_id: 's', content: 'A_PRIVATE_RECORD', type: '探访' },
-      { id: 'lb', volunteer_id: 'b', student_id: 's', content: 'B_OWN_RECORD' + '记'.repeat(1500) + '不想活', type: '通话' }
+      { id: 'la', volunteer_id: 'a', student_id: 's', content: 'A_PRIVATE_RECORD', type: '探访', created_at: '2026-10-01T00:00:00Z' },
+      { id: 'lb', volunteer_id: 'b', student_id: 's', content: 'B_OWN_RECORD' + '记'.repeat(1500) + '不想活', type: '通话', created_at: '2026-10-02T00:00:00Z' }
     ]
   };
   await fs.writeFile(file, JSON.stringify(state));
@@ -54,7 +54,7 @@ test('AI materials respect own logs during shared pairing and handoff; late cris
   const call = async (kind, token = '2') => {
     const response = await originalFetch(`http://127.0.0.1:${server.address().port}/api/app/ai/${kind}`, {
       method: 'POST', headers: { 'Idempotency-Key': require('node:crypto').randomUUID(), Authorization: `Bearer ${token.repeat(64)}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentId: 's', period: '本期' })
+      body: JSON.stringify({ studentId: 's', period: '2026-10' })
     });
     return { status: response.status, body: await response.json() };
   };

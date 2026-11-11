@@ -89,7 +89,7 @@ test('stage2 permissions, suggestion deduplication, async cover fallback and adm
   assert.equal(repeated.status, 200);
   assert.equal(repeated.body.data.status, require('../services/companionAI').FALLBACK.status);
   assert.equal((await db.listAiSuggestions({ kind: 'suggest' })).length, 2);
-  const poem = await call('/ai/poem', 'v', 'POST', { studentId: 's1', period: '2026年秋' });
+  const poem = await call('/ai/poem', 'v', 'POST', { studentId: 's1', period: '本期' });
   assert.equal(poem.status, 200);
   assert.equal(poem.body.data.title, '纸上的桥');
   assert.ok(poem.body.data.id);
@@ -106,7 +106,7 @@ test('stage2 permissions, suggestion deduplication, async cover fallback and adm
   assert.equal((await call('/companion-logs')).body.data.length, 1);
   assert.equal((await call('/ai/suggest', 'v', 'POST', { studentId: 's1' })).status, 422);
   contentSecurity.setChecker(async ({ content }) => ({ allowed: !content.includes('纸上的桥') }));
-  const rejectedPoem = await call('/ai/poem', 'v', 'POST', { studentId: 's1', period: '2026年秋' });
+  const rejectedPoem = await call('/ai/poem', 'v', 'POST', { studentId: 's1', period: '本期' });
   assert.equal(rejectedPoem.status, 200);
   assert.equal(rejectedPoem.body.data.title, '静待成长');
   assert.equal((await db.listGrowthPoems()).length, 1);

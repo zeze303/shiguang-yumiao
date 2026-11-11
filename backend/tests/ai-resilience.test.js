@@ -49,7 +49,7 @@ test('empty materials and summary failures remain usable; poem errors provide sa
   assert.equal(continued.status, '倾听孩子');
   assert.equal(summaryCalls, 1);
   assert.equal(writes, 1);
-  logs = [{ type: '探访', content: '记'.repeat(1501) + '不想活' }];
+  logs = [{ type: '探访', content: '记'.repeat(1501) + '不想活', createdAt: new Date().toISOString() }];
   rejectOutput = true;
   const crisis = await service.generateSuggest(student, volunteer);
   assert.ok(crisis.status.includes(ai.CRISIS_GUIDANCE));
@@ -79,6 +79,6 @@ test('empty materials and summary failures remain usable; poem errors provide sa
   const noPoem = await call('poem');
   assert.equal(noPoem.status, 422);
   assert.match(noPoem.body.message, /请先添加陪伴记录/);
-  logs = [{ type: '探访', content: '分享作品' }];
+  logs = [{ type: '探访', content: '分享作品', createdAt: new Date().toISOString() }];
   assert.equal((await call('poem')).status, 200);
 });

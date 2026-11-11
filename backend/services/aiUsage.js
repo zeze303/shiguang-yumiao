@@ -45,8 +45,8 @@ async function run(accountId, key, payload, task) {
   const hash = crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex');
   const current = running.get(id);
   if (current) {
-    if (current.hash !== hash) throw error(409, '幂等键已用于其他请求');
-    return current.promise;
+    if (current.hash !== hash) throw Object.assign(error(409, '操作键已被不同请求使用'), { code: 'IDEMPOTENCY_CONFLICT' });
+    throw Object.assign(error(202, '生成请求正在处理中'), { code: 'AI_PENDING' });
   }
   const promise = (async () => {
     let acquired = false;
@@ -54,14 +54,14 @@ async function run(accountId, key, payload, task) {
     const result = await transaction(ledger => {
       const prior = ledger.requests[id];
       if (prior) {
-        if (prior.hash !== hash) throw error(409, '幂等键已用于其他请求');
-        if (prior.state !== 'done') throw error(409, '请求已受理或失败，请勿重复付费');
-        return { cached: true, value: prior.value };
+        if (prior.hash !== hash) throw Object.assign(error(409, '操作键已被不同请求使用'), { code: 'IDEMPOTENCY_CONFLICT' });
+        if (prior.state === 'done') return { cached: true, value: prior.value };
+        if (prior.state !== 'failed') throw Object.assign(error(202, '生成请求正在处理中'), { code: 'AI_PENDING' });
       }
       if (active >= number('AI_MAX_CONCURRENCY', 3)) throw error(429, '生成请求繁忙');
       if ((ledger.accounts[accountId] || 0) >= number('AI_ACCOUNT_DAILY_LIMIT', 20)) throw error(429, '账号今日配额已用完');
       if (ledger.units >= number('AI_GLOBAL_DAILY_UNITS', 500)) throw error(429, '今日生成预算已熔断');
-      if (Object.keys(ledger.requests).length >= number('AI_IDEMPOTENCY_MAX_RECORDS', 10000)) throw error(429, '幂等记录容量已满');
+      if (!prior && Object.keys(ledger.requests).length >= number('AI_IDEMPOTENCY_MAX_RECORDS', 10000)) throw error(429, '幂等记录容量已满');
       ledger.accounts[accountId] = (ledger.accounts[accountId] || 0) + 1;
       ledger.requests[id] = { hash, state: 'pending', expiresAt: Date.now() + number('AI_IDEMPOTENCY_TTL_DAYS', 7) * 86400000 };
       active++;
@@ -74,8 +74,11 @@ async function run(accountId, key, payload, task) {
       await transaction(ledger => { if (ledger.requests[id]) Object.assign(ledger.requests[id], { state: 'done', value }); });
       return value;
     } catch (e) {
-      await transaction(ledger => { if (ledger.requests[id]) ledger.requests[id].state = 'failed'; });
-      throw e;
+      // Keep known domain errors; never persist raw provider errors containing URLs or credentials.
+      const known = ['NO_MATERIAL', 'INVALID_PERIOD'].includes(e.code);
+      const failure = { code: known ? e.code : 'AI_FAILED', message: known ? e.message : '生成服务调用失败，请稍后使用同一操作键重试' };
+      await transaction(ledger => { if (ledger.requests[id]) Object.assign(ledger.requests[id], { state: 'failed', error: failure }); });
+      throw Object.assign(error(known ? e.status : [422, 429, 502, 503].includes(e.status) ? e.status : 502, failure.message), { code: failure.code });
     }
     } finally { if (acquired) active--; }
   })();

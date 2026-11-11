@@ -147,7 +147,7 @@ router.post('/companion-logs', async (req, res) => {
   if (!student) return;
   const checked = await contentSecurity.checkText(content, req.volunteer.openid);
   if (!checked.allowed) return fail(res, 422, '记录内容未通过审核');
-  return ok(res, await db.createCompanionLog({ volunteerId: req.volunteer.id, studentId: student.id, type, content: content.trim(), images }));
+  return ok(res, await db.createCompanionLog({ volunteerId: req.volunteer.id, studentId: student.id, type, content: content.trim(), images }, req.get('Idempotency-Key')));
 });
 router.post('/ai/suggest', async (req, res) => {
   const student = await accessibleStudent(req, res, req.body?.studentId);

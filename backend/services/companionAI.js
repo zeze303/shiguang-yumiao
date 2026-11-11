@@ -15,14 +15,46 @@ async function allowed(value, volunteer) {
   return (await security.checkText(typeof value === 'string' ? value : JSON.stringify(value), volunteer.openid)).allowed;
 }
 function redact(value, student) { return privacy.filterText(value, student); }
+// Calendar periods use Asia/Shanghai boundaries, including timestamps stored in UTC.
+function periodRange(period) {
+  const value = period.trim();
+  let year, month, months = 1;
+  const current = new Date(Date.now() + 8 * 3600000);
+  if (value === '本期' || value === '本月') {
+    year = current.getUTCFullYear(); month = current.getUTCMonth() + 1;
+  } else {
+    let match = /^(\d{4})(?:年|[-/])(\d{1,2})月?$/.exec(value);
+    if (match) { year = Number(match[1]); month = Number(match[2]); }
+    else if ((match = /^(\d{4})年([春夏秋冬])季?$/.exec(value))) {
+      year = Number(match[1]); month = { 春: 3, 夏: 6, 秋: 9, 冬: 12 }[match[2]]; months = 3;
+    } else if ((match = /^(\d{4})(?:年?第([1-4])季度|[- ]?Q([1-4]))$/i.exec(value))) {
+      year = Number(match[1]); month = (Number(match[2] || match[3]) - 1) * 3 + 1; months = 3;
+    } else if ((match = /^(\d{4})年?$/.exec(value))) {
+      year = Number(match[1]); month = 1; months = 12;
+    }
+  }
+  if (!year || year < 1000 || !month || month > 12) throw Object.assign(new Error('周期格式无效，请使用2026年10月或2026-10等明确周期'), { status: 400, code: 'INVALID_PERIOD' });
+  return { start: Date.UTC(year, month - 1, 1) - 8 * 3600000, end: Date.UTC(year, month - 1 + months, 1) - 8 * 3600000 };
+}
 async function contextFor(student, volunteer, period) {
   const logFilters = { studentId: student.id };
   if (volunteer.role !== 'admin') logFilters.volunteerId = volunteer.id;
   const [records, logs] = await Promise.all([db.listRecords(student.id), db.listCompanionLogs(logFilters)]);
-  const latest = period ? records.find(row => row.period === period) : records[0];
-  const materials = logs.filter(row => typeof row.content === 'string' && row.content.trim()).sort(db.newestFirst).slice(0, 10).map(row => ({ type: row.type, content: row.content, createdAt: row.createdAt }));
-  for (const row of records.slice(0, 3)) {
-    if (period && row.period !== period) continue;
+  const range = period ? periodRange(period) : null;
+  const inRange = date => {
+    const time = Date.parse(date);
+    return time >= range.start && time < range.end;
+  };
+  const selectedRecords = range ? records.filter(row => {
+    if (!row.period) return inRange(row.createdAt);
+    try {
+      const source = periodRange(row.period);
+      return source.start >= range.start && source.end <= range.end;
+    } catch { return false; }
+  }) : records;
+  const latest = selectedRecords[0];
+  const materials = logs.filter(row => (!range || inRange(row.createdAt)) && typeof row.content === 'string' && row.content.trim()).sort(db.newestFirst).slice(0, 10).map(row => ({ type: row.type, content: row.content, createdAt: row.createdAt }));
+  for (const row of selectedRecords.slice(0, 3)) {
     for (const key of ['commentOverall', 'commentPsychology', 'commentAesthetic', 'commentFinance', 'commentBehavior']) {
       if (typeof row[key] === 'string' && row[key].trim()) materials.push({ type: '成长记录', content: row[key], period: row.period });
     }
@@ -78,7 +110,7 @@ async function generateSuggest(student, volunteer) {
 async function generatePoem(student, volunteer, period) {
   if (!privacy.isSafe(period, student)) throw Object.assign(new Error('周期包含隐私'), { status: 422 });
   const context = await contextFor(student, volunteer, period);
-  if (!context.materials.length) throw Object.assign(new Error('暂无可用于写诗的素材，请先添加陪伴记录'), { status: 422, code: 'NO_POEM_MATERIAL' });
+  if (!context.materials.length) throw Object.assign(new Error('该周期暂无可用于写诗的素材，请先添加陪伴记录'), { status: 422, code: 'NO_MATERIAL' });
   const fallback = () => ({ title: '静待成长', content: '本次成长诗暂不可用，请稍后再试。' + (context.crisis ? ai.CRISIS_GUIDANCE : ''), coverUrl: images.DEFAULT_COVER });
   let value;
   try { value = await ai.generatePoem({ ...context, period }); }

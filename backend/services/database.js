@@ -78,6 +78,38 @@ async function insert(table, value) {
   if (supabase) return unwrap(await supabase.from(table).insert(row).select().single());
   return mutateLocal(state => { state[table].push(row); return row; });
 }
+async function createCompanionLog(value, idempotencyKey) {
+  if (idempotencyKey === undefined) return insert('app_companion_logs', value);
+  if (typeof idempotencyKey !== 'string' || !/^[\x21-\x7e]{1,128}$/.test(idempotencyKey)) {
+    throw Object.assign(new Error('操作键必须为1到128位可见 ASCII 字符'), { status: 400, code: 'INVALID_IDEMPOTENCY_KEY' });
+  }
+  const sameRequest = prior => {
+    const row = toCamel(prior);
+    if (row.studentId !== value.studentId || row.type !== value.type || row.content !== value.content || JSON.stringify(row.images) !== JSON.stringify(value.images)) {
+      throw Object.assign(new Error('操作键已被不同请求使用'), { status: 409, code: 'IDEMPOTENCY_CONFLICT' });
+    }
+    return row;
+  };
+  if (supabase) {
+    try { return await insert('app_companion_logs', { ...value, idempotencyKey }); }
+    catch (error) {
+      if (error.code !== '23505') throw error;
+      const prior = (await select('app_companion_logs', { volunteer_id: value.volunteerId, idempotency_key: idempotencyKey }))[0];
+      if (!prior) throw error;
+      return sameRequest(prior);
+    }
+  }
+  return mutateLocal(state => {
+    const prior = state.app_companion_logs.find(raw => {
+      const row = toCamel(raw);
+      return row.volunteerId === value.volunteerId && row.idempotencyKey === idempotencyKey;
+    });
+    if (prior) return sameRequest(prior);
+    const row = { id: crypto.randomUUID(), created_at: new Date().toISOString(), ...toSnake(value), idempotency_key: idempotencyKey };
+    state.app_companion_logs.push(row);
+    return row;
+  });
+}
 async function findVolunteerByOpenid(openid) {
   return (await select('app_volunteers', { openid }))[0] || null;
 }
@@ -255,7 +287,7 @@ module.exports = {
   listVolunteers: () => select('app_volunteers'),
   createRelation, deleteRelation, updatePoemCover, newestFirst,
   listCompanionLogs: filters => select('app_companion_logs', toSnake(filters || {})),
-  createCompanionLog: value => insert('app_companion_logs', value),
+  createCompanionLog,
   listGrowthPoems: filters => select('app_growth_poems', toSnake(filters || {})),
   createGrowthPoem: value => insert('app_growth_poems', value),
   listAiSuggestions: filters => select('app_ai_suggestions', toSnake(filters || {})),

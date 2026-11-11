@@ -14,12 +14,13 @@ test('account reservation, concurrency, budget and idempotency block duplicate c
   let calls = 0;
   const task = async () => { calls++; await held; return { result: 'ok' }; };
   const first = usage.run(account, key, { kind: 'suggest' }, task);
-  const duplicate = usage.run(account, key, { kind: 'suggest' }, task);
+  const duplicate = assert.rejects(usage.run(account, key, { kind: 'suggest' }, task), e => e.status === 202 && e.code === 'AI_PENDING');
   await new Promise(resolve => setTimeout(resolve, 50));
   await assert.rejects(usage.run('other-' + account, crypto.randomUUID(), {}, task), e => e.status === 429);
   await assert.rejects(usage.run(account, key, { kind: 'poem' }, task), e => e.status === 409);
   release();
-  assert.deepEqual(await first, await duplicate);
+  await duplicate;
+  assert.deepEqual(await first, { result: 'ok' });
   assert.equal(calls, 1);
   assert.deepEqual(await usage.run(account, key, { kind: 'suggest' }, task), { result: 'ok' });
   assert.equal(calls, 1);
