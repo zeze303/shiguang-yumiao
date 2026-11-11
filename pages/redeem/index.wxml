@@ -10,7 +10,13 @@
   <view
     class="subtitle"
   >输入项目组织提供的邀请码，进入授权服务范围。</view>
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="list"
+    rows="3"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     message="{{error}}"
     bind:retry="load"

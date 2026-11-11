@@ -23,7 +23,13 @@
       class="text-btn"
       bindtap="load"
     >重试</button></view>
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="list"
+    rows="3"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     title="{{status === 'empty' ? '还没有结对的孩子' : ''}}"
     message="{{error || '请联系管理者安排陪伴。'}}"

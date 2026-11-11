@@ -1,7 +1,13 @@
 <view
   class="page tab-page"
 >
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="list"
+    rows="3"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     title="{{status === 'empty' ? '资料暂未完善' : ''}}"
     message="{{error || '请联系组织管理员补充资料。'}}"

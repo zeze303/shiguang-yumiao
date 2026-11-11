@@ -1,1 +1,6 @@
-{ "navigationBarTitleText": "邀请码认证" }
+{
+  "navigationBarTitleText": "邀请码认证",
+  "usingComponents": {
+    "skeleton": "/components/skeleton/index"
+  }
+}

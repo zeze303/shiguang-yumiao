@@ -108,7 +108,13 @@
       >{{item.label}} {{item.count}}</button>
     </view>
   </scroll-view>
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="list"
+    rows="3"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     title="{{status==='empty' && !items.length ? '还没有邀请码' : status==='empty' ? '当前筛选下没有邀请码' : ''}}"
     message="{{error || (status==='empty' && !items.length ? '选择身份与有效期后生成第一个邀请码。' : '切换其他状态或生成新的邀请码。')}}"

@@ -1,7 +1,13 @@
 <view
   class="page with-action"
 >
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="list"
+    rows="3"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     title="{{status==='empty'?'还没有结对的孩子':''}}"
     message="{{error || '结对后才能保存陪伴记录。'}}"

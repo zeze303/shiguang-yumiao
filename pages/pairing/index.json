@@ -1,1 +1,6 @@
-{ "navigationBarTitleText": "结对管理" }
+{
+  "navigationBarTitleText": "结对管理",
+  "usingComponents": {
+    "skeleton": "/components/skeleton/index"
+  }
+}

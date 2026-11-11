@@ -46,7 +46,13 @@
       class="small"
     >脱敏汇总</view>
   </view>
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="list"
+    rows="3"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     title="{{status==='empty'?'服务数据尚在积累':''}}"
     message="{{error || '暂时没有公开统计，仍可了解项目或申请认证。'}}"

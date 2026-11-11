@@ -1,7 +1,13 @@
 <view
   class="page with-action"
 >
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="list"
+    rows="3"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     title="{{status==='empty'?'诗文暂时不可用':''}}"
     message="{{error || '请返回成长诗列表查看。'}}"

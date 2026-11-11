@@ -32,7 +32,13 @@
       class="text-btn"
       bindtap="load"
     >重试</button></view>
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="list"
+    rows="3"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     title="还没有志愿者加入"
     message="{{error || '志愿者登录后会加入服务计划。'}}"

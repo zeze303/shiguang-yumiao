@@ -1,7 +1,13 @@
 <view
   class="page"
 >
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="detail"
+    rows="1"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     title="{{status==='empty'?'还需要一点成长的线索':''}}"
     message="{{error || '暂时没有可用建议，请先查看档案。'}}"

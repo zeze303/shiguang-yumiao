@@ -1,18 +1,38 @@
 const api = require('../../utils/api'),
   ui = require('../../utils/page'),
-  idempotency = require('../../utils/idempotency');
+  idempotency = require('../../utils/idempotency'),
+  cache = require('../../utils/cache');
+const TTL = 60000;
+
 Page({
   data: { status: 'loading', student: null, suggestion: null, busy: false, error: '' },
+  lastLoadAt: 0,
   onLoad(q) {
     this.id = q.id;
-    this.load();
+    const key = this.cacheKey();
+    const cached = key ? cache.get(key) : null;
+    if (cached) this.applyCached(cached);
+    this.load(false);
   },
-  async load() {
+  cacheKey() {
+    return this.id ? 'advice:' + this.id : '';
+  },
+  applyCached(data) {
+    if (!data || !data.suggestion) return;
+    this.setData({
+      student: data.student,
+      suggestion: data.suggestion,
+      status: 'ready',
+      error: ''
+    });
+  },
+  async load(force) {
     if (this.data.busy || !(await ui.guard(this))) return;
     if (!this.id) {
       this.setData({ status: 'empty' });
       return;
     }
+    if (!force && this.data.suggestion && Date.now() - this.lastLoadAt < TTL) return;
     this.setData({ busy: true });
     try {
       const [student, suggestion] = await Promise.all([
@@ -23,6 +43,8 @@ Page({
         )
       ]);
       this.suggestOperation = null;
+      this.lastLoadAt = Date.now();
+      if (suggestion) cache.set(this.cacheKey(), { student, suggestion }, TTL);
       this.setData({ status: suggestion ? 'ready' : 'empty', student, suggestion, error: '' });
     } catch (e) {
       if (ui.authError(this, e)) return;

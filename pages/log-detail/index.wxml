@@ -1,7 +1,13 @@
 <view
   class="page"
 >
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="list"
+    rows="3"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     title="{{status==='empty'?'这条记录暂时不可用':''}}"
     message="{{error || '记录可能已撤回，或访问范围已变更。'}}"
