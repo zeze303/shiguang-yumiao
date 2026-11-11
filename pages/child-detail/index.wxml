@@ -70,7 +70,7 @@
     >
       <image
         class="icon"
-        src="/assets/icons/alert.svg"
+        src="/assets/icons/alert-active.svg"
       />
       <text>建议多一些耐心与回应。先了解近期具体情况，再与结对负责人一起跟进。</text>
     </view>
@@ -95,18 +95,6 @@
           type="2d"
           id="radar"
         />
-        <view
-          class="radar-label top"
-        >心理 {{student.scores[0]}}</view>
-        <view
-          class="radar-label right"
-        >美育 {{student.scores[1]}}</view>
-        <view
-          class="radar-label bottom"
-        >财商 {{student.scores[2]}}</view>
-        <view
-          class="radar-label left"
-        >行为 {{student.scores[3]}}</view>
       </view>
       <view
         wx:else

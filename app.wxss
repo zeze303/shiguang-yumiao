@@ -41,8 +41,8 @@ page {
   --font-body: 28rpx;
   --font-compact: 26rpx;
   --font-caption: 24rpx;
-  --font-meta: 22rpx;
-  --font-tab: 20rpx;
+  --font-meta: 24rpx;
+  --font-tab: 22rpx;
   background: var(--surface-background);
   color: var(--text-primary);
   font: 28rpx/1.714 -apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
@@ -155,7 +155,7 @@ text {
 }
 
 .metadata {
-  font-size: 22rpx;
+  font-size: 24rpx;
   line-height: 36rpx;
   color: var(--text-secondary);
 }
@@ -165,7 +165,7 @@ text {
 }
 
 .eyebrow {
-  font-size: 20rpx;
+  font-size: 22rpx;
   line-height: 32rpx;
   letter-spacing: 4rpx;
   color: var(--brand-deep);
@@ -208,8 +208,8 @@ text {
 
 .btn.compact {
   font-size: 24rpx;
-  padding: 12rpx 24rpx;
-  min-height: 88rpx;
+  padding: 12rpx 28rpx;
+  min-height: 72rpx;
 }
 
 .text-btn {
@@ -266,7 +266,7 @@ text {
   min-height: 48rpx;
   padding: 4rpx 16rpx;
   border-radius: 12rpx;
-  font-size: 22rpx;
+  font-size: 24rpx;
   line-height: 36rpx;
   background: var(--tint-gold);
 }
@@ -475,7 +475,7 @@ text {
   border-top: 2rpx solid var(--border-default);
   margin-top: 32rpx;
   padding-top: 24rpx;
-  font-size: 22rpx;
+  font-size: 24rpx;
   line-height: 36rpx;
   color: var(--text-secondary);
 }
@@ -509,7 +509,7 @@ text {
   border-top: 2rpx solid var(--border-default);
   padding-top: 32rpx;
   margin-top: 48rpx;
-  font-size: 22rpx;
+  font-size: 24rpx;
   line-height: 36rpx;
   color: var(--text-secondary);
 }
@@ -582,4 +582,11 @@ text {
   view {
     animation: none !important;
   }
+}
+
+.number,
+.metric-value,
+.value,
+.mini-label {
+  font-variant-numeric: tabular-nums;
 }

@@ -119,7 +119,7 @@ Page({
               : ['psychology', 'aesthetic', 'finance', 'behavior'].map((k) => r[k])[dimension] +
                 ' 分')
       )
-      .join(' / ');
+      .join(' · ');
   },
   dim(e) {
     const dimension = +e.currentTarget.dataset.i;

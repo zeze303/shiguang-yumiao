@@ -41,7 +41,7 @@
         value="{{days}}"
         bindinput="days"
         disabled="{{busy}}"
-        placeholder="1至365，留空长期有效"
+        placeholder="1 至 365，留空长期有效"
       />
     </view>
     <button

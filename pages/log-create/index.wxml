@@ -48,7 +48,7 @@
           disabled="{{busy}}"
         ><image
             class="icon"
-            src="/assets/icons/{{item.icon}}.svg"
+            src="/assets/icons/{{item.icon}}{{type===item.name?'-active':''}}.svg"
           />{{item.name}}</button>
       </view>
     </view>

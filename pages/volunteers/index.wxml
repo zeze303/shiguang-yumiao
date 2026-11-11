@@ -90,6 +90,6 @@
   </view>
   <view
     class="version"
-  >阶段 1 管理骨架 · 占位数据</view>
+  >数据由项目组脱敏汇总 · 仅授权成员可见</view>
 </view>
 <role-tabs/>

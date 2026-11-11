@@ -142,7 +142,7 @@ Page({
       const days = String(rawDays ?? '').trim();
       const validDays = !days || (Number.isInteger(Number(days)) && Number(days) >= 1 && Number(days) <= 365);
       if (!validDays) {
-        this.setData({ error: '有效天数须为1至365的整数，留空表示长期有效。' });
+        this.setData({ error: '有效天数须为1 至 365的整数，留空表示长期有效。' });
         this.notify('请检查有效天数。');
         return;
       }

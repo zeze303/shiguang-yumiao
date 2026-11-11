@@ -24,7 +24,13 @@ function draw(page) {
         const { ctx, w, h } = radar,
           cx = w / 2,
           cy = h / 2,
-          r = Math.min(w, h) * 0.34;
+          windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync(),
+          labelSize = 24 * ((windowInfo.windowWidth || 375) / 750),
+          gap = labelSize * 0.8;
+        const radarLabels = page.data.student.scores.map((score, index) => ['心理', '美育', '财商', '行为'][index] + ' ' + score);
+        ctx.font = labelSize + 'px sans-serif';
+        const labelWidth = Math.max(...radarLabels.map(label => ctx.measureText(label).width));
+        const r = Math.max(0, Math.min(h * 0.30, w / 2 - labelWidth - gap - 4));
         const point = (i, v) => [
           cx + (Math.sin((i * Math.PI) / 2) * r * v) / 100,
           cy - (Math.cos((i * Math.PI) / 2) * r * v) / 100
@@ -62,6 +68,16 @@ function draw(page) {
           ctx.fillStyle = colors[i];
           ctx.fill();
         });
+        ctx.fillStyle = '#2c1810';
+        ctx.font = labelSize + 'px sans-serif';
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.fillText(radarLabels[0], cx, cy - r - gap);
+        ctx.fillText(radarLabels[2], cx, cy + r + gap);
+        ctx.textAlign = 'left';
+        ctx.fillText(radarLabels[1], cx + r + gap, cy);
+        ctx.textAlign = 'right';
+        ctx.fillText(radarLabels[3], cx - r - gap, cy);
       }
       const trend = context(items[1]);
       if (!trend) return;

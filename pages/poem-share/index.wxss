@@ -15,8 +15,8 @@
 }
 
 .verse {
-  font-size: 30rpx;
-  line-height: 1.9;
+  font-size: 32rpx;
+  line-height: 2.05;
 }
 
 .share-bottom {
@@ -29,14 +29,19 @@
 }
 
 .stamp {
+  flex: none;
+  width: 88rpx;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   white-space: pre-line;
-  border: 2rpx solid var(--brand-deep);
-  border-radius: 6rpx;
-  padding: 8rpx;
-  color: var(--brand-deep);
-  font-size: 30rpx;
-  line-height: 1.1;
-  transform: rotate(-3deg);
+  text-align: center;
+  border-radius: 20rpx;
+  background: var(--brand-deep);
+  color: var(--accent-gold-light);
+  font: 34rpx/1.15 SimSun, serif;
+  transform: rotate(-5deg);
 }
 
 .check-row {

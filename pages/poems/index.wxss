@@ -1,5 +1,5 @@
 .generate {
-  margin: 32rpx 0 40rpx;
+  margin: 32rpx 0 32rpx;
 }
 
 .poem-item {
@@ -153,4 +153,23 @@
 
 .filter-no-children {
   padding: 32rpx 24rpx;
+}
+
+.poem-cover-wrap {
+  position: relative;
+  background: var(--surface-paper);
+}
+.poem-cover {
+  height: 220rpx;
+}
+.cover-fallback {
+  opacity: .55;
+}
+.cover-brand {
+  position: absolute;
+  left: 32rpx;
+  top: 32rpx;
+  z-index: 1;
+  font-size: 28rpx;
+  color: var(--brand-deep);
 }

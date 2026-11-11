@@ -19,6 +19,7 @@ module.exports=async function checkFields(){
  try{
   const children=await api.adminStudents();assert.equal(children[0].grade,'四年级');assert.equal(children[0].total,71);assert.equal(children[0].urgent,true);assert.equal(children[0].is_paired,true);assert.equal(children[1].is_paired,false);assert.equal(children.filter(s=>s.is_paired===false).length,1);
   const child=await api.student('s1');assert.equal(child.is_paired,null,'缺少明确关系时不得猜未结对');assert.equal(child.period,'2026-10');
+  const savedName=student.name;student.name='陈*';assert.equal((await api.student('s1')).initial,'陈');student.name='***';assert.equal((await api.student('s1')).initial,'苗');student.name=savedName;
   const record=(await api.records('s1'))[0];assert.equal(record.student_id,'s1');
   const poem=(await api.poems('s1'))[0];assert.equal(poem.student_id,'s1');assert.equal(poem.cover_url,'https://example.test/cover.png');assert.equal(poem.created_at,'2026-10-11T10:00:00Z');assert.equal(poem.created_by,'v1');
   // 真实封面相对路径须以接口origin解析，列表与生成返回共用适配。

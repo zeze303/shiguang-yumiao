@@ -55,7 +55,7 @@ function student(raw, relations) {
     ...Object.fromEntries(fields.map((key, i) => [key, scores[i]])),
     name,
     grade: value(raw, 'gradeClass', 'grade_class', raw.grade || ''),
-    initial: name.slice(-1),
+    initial: Array.from(name.replace(/[*＊\s]/g, '')).slice(-1)[0] || '苗',
     scores,
     hasScores,
     total,

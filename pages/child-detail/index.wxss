@@ -29,32 +29,6 @@
   height: 464rpx;
 }
 
-.radar-label {
-  position: absolute;
-  font-size: 22rpx;
-  color: var(--text-secondary);
-}
-
-.radar-label.top {
-  top: 0;
-  left: 43%;
-}
-
-.radar-label.right {
-  right: 0;
-  top: 45%;
-}
-
-.radar-label.bottom {
-  bottom: 0;
-  left: 40%;
-}
-
-.radar-label.left {
-  left: 0;
-  top: 45%;
-}
-
 .dim-values {
   display: grid;
   grid-template-columns: repeat(4,1fr);
@@ -97,4 +71,8 @@
   border-radius: 50%;
   background: var(--accent-gold);
   border: 4rpx solid var(--surface-paper);
+}
+
+.with-action {
+  padding-bottom: calc(200rpx + env(safe-area-inset-bottom));
 }

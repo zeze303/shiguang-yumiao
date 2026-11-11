@@ -3,7 +3,7 @@
 >
   <view
     class="eyebrow"
-  >青溪服务计划 / 管理视角</view>
+  >青溪服务计划 · 管理视角</view>
   <view
     class="title"
   >让每一份陪伴有回应</view>
@@ -118,7 +118,7 @@
     </button>
     <view
       class="version"
-    >阶段 1 管理骨架 · 占位数据</view>
+    >数据由项目组脱敏汇总 · 仅授权成员可见</view>
   </block>
 </view>
 <role-tabs/>

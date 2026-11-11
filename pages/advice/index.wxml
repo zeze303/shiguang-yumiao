@@ -52,7 +52,7 @@
       >
         <view
           class="step-num"
-        >0{{index+1}}</view>
+        >{{index+1}}</view>
         <view
           class="grow"
         >{{item}}</view>

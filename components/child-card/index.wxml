@@ -19,12 +19,12 @@
       >{{student.grade}} · {{student.school}}</view>
     </view>
     <view
-      class="tag {{student.urgent ? 'warn' : student.total >= 80 ? 'good' : ''}}"
+      class="tag {{student.urgent || student.level === '预警' || student.level === '高危' ? 'warn' : student.total >= 80 ? 'good' : ''}}"
     ><image
-        wx:if="{{student.urgent}}"
+        wx:if="{{student.urgent || student.level === '预警' || student.level === '高危'}}"
         class="icon"
-        src="/assets/icons/alert.svg"
-      />{{student.urgent ? '需跟进' : student.level}}</view>
+        src="/assets/icons/alert-active.svg"
+      />{{student.urgent || student.level === '预警' || student.level === '高危' ? '需跟进' : student.level}}</view>
   </view>
   <view
     class="mini-grid"
@@ -37,7 +37,7 @@
         class="mini-label"
       >
         <text>{{item.label}}</text>
-        <text>{{item.value === null ? '—' : item.value}}</text>
+        <text class="mini-value">{{item.value === null ? '—' : item.value}}</text>
       </view>
       <view
         class="mini-track"

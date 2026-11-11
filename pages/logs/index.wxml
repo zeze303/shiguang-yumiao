@@ -22,7 +22,7 @@
       bindtap="add"
     ><image
         class="icon"
-        src="/assets/icons/plus.svg"
+        src="/assets/icons/plus-white.svg"
       />新增</button>
   </view>
   <button
@@ -74,7 +74,7 @@
       >
         <view
           class="record-title"
-        >与{{item.student_name || '孩子'}}的一次{{item.type}}</view>
+        >与{{item.student_name || '孩子'}}的陪伴</view>
         <view
           class="tag"
         >{{item.type}}</view>

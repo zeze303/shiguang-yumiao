@@ -18,7 +18,7 @@
     bindtap="generate"
   ><image
       class="icon"
-      src="/assets/icons/star.svg"
+      src="/assets/icons/star-white.svg"
     />写一首成长诗</button>
   <button
     class="student-filter"
@@ -58,13 +58,16 @@
       data-student="{{item.student_id}}"
       bindtap="open"
     >
-      <image
-        class="poem-cover"
-        mode="aspectFill"
-        src="{{item.cover_url || '/assets/landscape.svg'}}"
-        data-id="{{item.id}}"
-        binderror="coverError"
-      />
+      <view class="poem-cover-wrap">
+        <image
+          class="poem-cover {{!item.cover_url?'cover-fallback':''}}"
+          mode="aspectFill"
+          src="{{item.cover_url || '/assets/landscape.svg'}}"
+          data-id="{{item.id}}"
+          binderror="coverError"
+        />
+        <view wx:if="{{!item.cover_url}}" class="cover-brand serif">拾光育苗 · 成长有迹</view>
+      </view>
       <view
         class="poem-content"
       >

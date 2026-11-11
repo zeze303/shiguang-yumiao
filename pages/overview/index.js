@@ -15,7 +15,7 @@ Page({
       }));
       o.alerts = (o.alerts || []).map((s) => ({
         ...s,
-        initial: s.name.slice(-1),
+        initial: s.initial,
         severe: ['psychology', 'aesthetic', 'finance', 'behavior'].some((k) => s[k] < 40)
       }));
       this.setData({

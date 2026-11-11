@@ -58,9 +58,5 @@
       class="text-btn"
       bindtap="help"
     >如何获取邀请码</button>
-    <view
-      wx:if="{{!code}}"
-      class="small section"
-    >尚未填写邀请码，请向组织管理者申请。</view>
   </block>
 </view>

@@ -9,7 +9,7 @@
     >
       <view
         class="eyebrow"
-      >拾光育苗 / 陪伴手册</view>
+      >拾光育苗 · 陪伴手册</view>
       <view
         class="title"
       >{{profile.name || '你'}}，陪伴从这里开始</view>

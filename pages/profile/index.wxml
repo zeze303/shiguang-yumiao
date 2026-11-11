@@ -141,8 +141,6 @@
     >退出登录</button>
     <view
       class="version"
-    ><view
-        class="serif"
-      >成长有迹，心自成诗</view>心迹成诗 · 拾光系 / v1.0</view>
+    >拾光育苗 · 成长有迹，心自成诗 · v1.0</view>
   </block>
 </view>

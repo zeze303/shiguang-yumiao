@@ -69,7 +69,7 @@
       <view
         class="basis small"
       >{{children[childIndex].name}} · {{basis.period}}
-心理 {{basis.psychology}} / 美育 {{basis.aesthetic}} / 财商 {{basis.finance}} / 行为 {{basis.behavior}}</view>
+心理 {{basis.psychology}} · 美育 {{basis.aesthetic}} · 财商 {{basis.finance}} · 行为 {{basis.behavior}}</view>
     </view>
     <view
       wx:else
