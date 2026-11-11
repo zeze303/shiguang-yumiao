@@ -50,7 +50,13 @@
       class="text-btn"
       bindtap="load"
     >重试</button></view>
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="list"
+    rows="3"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     title="{{status==='empty'?'陪伴的第一页，等你写下':''}}"
     message="{{error || '留下这次陪伴的具体观察。'}}"

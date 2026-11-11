@@ -85,7 +85,13 @@
       class="text-btn"
       bindtap="load"
     >重试</button></view>
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="list"
+    rows="3"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     message="{{error || '结对后，这里将记录你们一起成长的足迹。'}}"
     title="{{status === 'empty' ? '还没有结对的孩子' : ''}}"

@@ -38,7 +38,13 @@
       src="/assets/icons/arrow.svg"
     />
   </button>
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="list"
+    rows="2"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     title="{{status==='empty'?'第一首成长诗，等你写下':''}}"
     message="{{error || '从真实观察中，拾起成长的片段。'}}"

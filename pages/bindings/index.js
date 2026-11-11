@@ -1,21 +1,26 @@
 const api = require('../../utils/api');
 const ui = require('../../utils/page');
+const cache = require('../../utils/cache');
+const KEY = 'bindings:students';
+const TTL = 60000;
+
 Page({
   data: { status: 'loading', error: '', items: [], filtered: [], filter: 'all', urgentCount: 0 },
+  lastLoadAt: 0,
   onShow() {
-    this.load();
+    const cached = cache.get(KEY);
+    if (cached) this.applyItems(cached);
+    if (cached && Date.now() - this.lastLoadAt < TTL) return;
+    this.load(false);
   },
-  async load() {
+  async load(force) {
     if (!(await ui.guard(this, ['volunteer', 'admin']))) return;
+    if (!force && this.data.items.length && Date.now() - this.lastLoadAt < TTL) return;
     try {
       const items = await api.students();
-      this.setData({
-        items,
-        status: items.length ? 'ready' : 'empty',
-        error: '',
-        urgentCount: items.filter((s) => s.urgent).length
-      });
-      this.apply();
+      this.lastLoadAt = Date.now();
+      cache.set(KEY, items, TTL);
+      this.applyItems(items);
     } catch (e) {
       if (ui.authError(this, e)) return;
       this.setData({
@@ -23,6 +28,15 @@ Page({
         error: ui.errorMessage(e)
       });
     }
+  },
+  applyItems(items) {
+    this.setData({
+      items,
+      status: items.length ? 'ready' : 'empty',
+      error: '',
+      urgentCount: items.filter((s) => s.urgent).length
+    });
+    this.apply();
   },
   apply() {
     this.setData({
@@ -50,7 +64,7 @@ Page({
     this.apply();
   },
   async onPullDownRefresh() {
-    await this.load();
+    await this.load(true);
     wx.stopPullDownRefresh();
   }
 });

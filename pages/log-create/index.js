@@ -1,5 +1,6 @@
 const api = require('../../utils/api');
 const ui = require('../../utils/page');
+const cache = require('../../utils/cache');
 Page({
   data: {
     status: 'loading',
@@ -87,6 +88,8 @@ Page({
       this.saved = true;
       getApp().globalData.logDraft = null;
       getApp().globalData.revision++;
+      cache.invalidate('logs:list');
+      cache.invalidate('child:' + this.data.children[this.data.childIndex].id);
       if (wx.disableAlertBeforeUnload) wx.disableAlertBeforeUnload();
       wx.showToast({ title: '记录已保存', icon: 'none' });
       wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/logs/index' }) });

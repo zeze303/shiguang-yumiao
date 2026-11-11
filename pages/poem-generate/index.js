@@ -1,6 +1,7 @@
 const api = require('../../utils/api'),
   ui = require('../../utils/page'),
-  idempotency = require('../../utils/idempotency');
+  idempotency = require('../../utils/idempotency'),
+  cache = require('../../utils/cache');
 Page({
   data: {
     status: 'loading',
@@ -98,6 +99,8 @@ Page({
       this.poemOperation = null;
       this.setData({ uncertain: false });
       getApp().globalData.revision++;
+      cache.invalidate('poems:list');
+      cache.invalidate('child:' + studentId);
       if (!this.unloaded)
         wx.redirectTo({
           url:

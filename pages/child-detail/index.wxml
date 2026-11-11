@@ -1,7 +1,13 @@
 <view
   class="page with-action"
 >
+  <skeleton
+    wx:if="{{status === 'loading'}}"
+    type="detail"
+    rows="1"
+  />
   <state-view
+    wx:if="{{status !== 'loading'}}"
     status="{{status}}"
     title="{{status==='empty'?'暂无成长档案':''}}"
     message="{{error}}"

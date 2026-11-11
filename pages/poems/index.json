@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "成长诗",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "skeleton": "/components/skeleton/index"
+  }
 }

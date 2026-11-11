@@ -1,5 +1,9 @@
 const api = require('../../utils/api'),
-  ui = require('../../utils/page');
+  ui = require('../../utils/page'),
+  cache = require('../../utils/cache');
+const KEY = 'logs:list';
+const TTL = 60000;
+
 Page({
   data: {
     status: 'loading',
@@ -11,8 +15,12 @@ Page({
     filterLabel: '全部',
     error: ''
   },
+  lastLoadAt: 0,
   onShow() {
-    this.load();
+    const cached = cache.get(KEY);
+    if (cached) this.applyData(cached);
+    if (cached && Date.now() - this.lastLoadAt < TTL) return;
+    this.load(false);
   },
   onHide() {
     this.closeFilter();
@@ -24,17 +32,18 @@ Page({
     this.setData({ filterOpen: false });
   },
   preventMove() {},
-  async load() {
+  async load(force) {
     if (!(await ui.guard(this, ['volunteer', 'admin']))) return;
+    if (!force && this.data.items.length && Date.now() - this.lastLoadAt < TTL) return;
     try {
       const [items, children] = await Promise.all([api.logs(), api.students()]);
-      this.setData({
+      const data = {
         items: items.map((l) => ({ ...l, date: (l.created_at || '').slice(0, 10) })),
-        children,
-        status: items.length ? 'ready' : 'empty',
-        error: ''
-      });
-      this.apply();
+        children
+      };
+      this.lastLoadAt = Date.now();
+      cache.set(KEY, data, TTL);
+      this.applyData(data);
     } catch (e) {
       if (ui.authError(this, e)) return;
       this.setData({
@@ -42,6 +51,15 @@ Page({
         error: ui.errorMessage(e)
       });
     }
+  },
+  applyData(data) {
+    this.setData({
+      items: data.items,
+      children: data.children,
+      status: data.items.length ? 'ready' : 'empty',
+      error: ''
+    });
+    this.apply();
   },
   apply() {
     const selected = this.data.children.find((child) => child.id === this.data.filter);
@@ -70,7 +88,7 @@ Page({
     });
   },
   async onPullDownRefresh() {
-    await this.load();
+    await this.load(true);
     wx.stopPullDownRefresh();
   }
 });

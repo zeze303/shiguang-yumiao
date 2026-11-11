@@ -1,0 +1,13 @@
+<view class="skeleton {{isDetail?'is-detail':''}}" aria-hidden="true">
+  <view wx:for="{{items}}" wx:key="*this" class="sk-card">
+    <view class="sk-line w40"></view>
+    <view class="sk-line w70"></view>
+    <view wx:if="{{isDetail}}" class="sk-block"></view>
+    <view wx:else class="sk-row">
+      <view class="sk-chip"></view>
+      <view class="sk-chip"></view>
+      <view class="sk-chip"></view>
+      <view class="sk-chip"></view>
+    </view>
+  </view>
+</view>

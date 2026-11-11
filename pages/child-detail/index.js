@@ -2,6 +2,9 @@ const api = require('../../utils/api');
 const ui = require('../../utils/page');
 const charts = require('../../utils/charts');
 const idempotency = require('../../utils/idempotency');
+const cache = require('../../utils/cache');
+const TTL = 60000;
+
 Page({
   data: {
     status: 'loading',
@@ -18,28 +21,46 @@ Page({
     poemsError: '',
     pointNote: '点击节点查看周期分数 · 0–100 分'
   },
+  lastLoadAt: 0,
   onLoad(q) {
     this.id = q.id;
   },
   onShow() {
-    this.load();
+    const key = this.cacheKey();
+    const cached = key ? cache.get(key) : null;
+    if (cached) this.applyCached(cached);
+    if (cached && Date.now() - this.lastLoadAt < TTL) {
+      this.refreshSections();
+      return;
+    }
+    this.load(false);
+  },
+  cacheKey() {
+    return this.id ? 'child:' + this.id : '';
   },
   onUnload() {
     this.unloaded = true;
   },
-  async load() {
+  async load(force) {
     if (!(await ui.guard(this))) return;
     if (!this.id) {
       this.setData({ status: 'empty', error: '请从结对或孩子列表选择档案。' });
       return;
     }
+    if (!force && this.data.student && Date.now() - this.lastLoadAt < TTL) return;
     try {
       const student = await api.student(this.id);
+      this.lastLoadAt = Date.now();
       this.setData({ student, status: 'ready', error: '' });
       charts.draw(this);
       await Promise.all([this.loadRecords(), this.loadLogs(), this.loadPoems(), this.loadAdvice()]);
+      this.saveCache();
     } catch (e) {
       if (ui.authError(this, e)) return;
+      if (this.data.student) {
+        this.setData({ error: ui.errorMessage(e) });
+        return;
+      }
       this.setData({
         status: 'error',
         student: null,
@@ -50,6 +71,38 @@ Page({
         error: ui.errorMessage(e)
       });
     }
+  },
+  applyCached(data) {
+    this.setData({
+      student: data.student,
+      records: data.records,
+      logs: data.logs,
+      poems: data.poems,
+      status: 'ready',
+      error: '',
+      recordsError: '',
+      logsError: '',
+      poemsError: ''
+    });
+    this.setData({ trendText: this.values(data.records, this.data.dimension) });
+    charts.draw(this);
+  },
+  refreshSections() {
+    Promise.all([this.loadRecords(), this.loadLogs(), this.loadPoems()]).then(() => this.saveCache());
+  },
+  saveCache() {
+    const key = this.cacheKey();
+    if (!key || !this.data.student) return;
+    cache.set(
+      key,
+      {
+        student: this.data.student,
+        records: this.data.records,
+        logs: this.data.logs,
+        poems: this.data.poems
+      },
+      TTL
+    );
   },
   async loadRecords() {
     try {
@@ -179,7 +232,7 @@ Page({
     });
   },
   async onPullDownRefresh() {
-    await this.load();
+    await this.load(true);
     wx.stopPullDownRefresh();
   }
 });
