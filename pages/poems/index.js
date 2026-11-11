@@ -32,7 +32,14 @@ Page({
     this.setData({ filterOpen: false });
   },
   preventMove() {},
-  async load(force) {
+  load(force) {
+    if (!force && this.inflight) return this.inflight;
+    this.inflight = this.doLoad(force).finally(() => {
+      this.inflight = null;
+    });
+    return this.inflight;
+  },
+  async doLoad(force) {
     if (!(await ui.guard(this, ['volunteer', 'admin']))) return;
     if (!force && cache.get(KEY) && Date.now() - this.lastLoadAt < TTL) return;
     try {

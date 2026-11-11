@@ -27,7 +27,14 @@ Page({
       error: ''
     });
   },
-  async load(force) {
+  load(force) {
+    if (!force && this.inflight) return this.inflight;
+    this.inflight = this.doLoad(force).finally(() => {
+      this.inflight = null;
+    });
+    return this.inflight;
+  },
+  async doLoad(force) {
     if (this.data.busy || !(await ui.guard(this))) return;
     if (!this.id) {
       this.setData({ status: 'empty' });

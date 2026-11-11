@@ -42,7 +42,14 @@ Page({
   onUnload() {
     this.unloaded = true;
   },
-  async load(force) {
+  load(force) {
+    if (!force && this.inflight) return this.inflight;
+    this.inflight = this.doLoad(force).finally(() => {
+      this.inflight = null;
+    });
+    return this.inflight;
+  },
+  async doLoad(force) {
     if (!(await ui.guard(this))) return;
     if (!this.id) {
       this.setData({ status: 'empty', error: '请从结对或孩子列表选择档案。' });
