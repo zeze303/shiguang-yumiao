@@ -51,6 +51,8 @@ Page({
   },
   async doLoad(force) {
     if (!(await ui.guard(this))) return;
+    this.epoch = getApp().globalData.sessionEpoch;
+    this.accountKey = (getApp().globalData.profile || {}).id;
     if (!this.id) {
       this.setData({ status: 'empty', error: '请从结对或孩子列表选择档案。' });
       return;
@@ -100,7 +102,10 @@ Page({
   },
   saveCache() {
     const key = this.cacheKey();
-    if (!key || !this.data.student) return;
+    if (!key || !this.data.student || this.unloaded) return;
+    const app = getApp();
+    if (this.epoch !== app.globalData.sessionEpoch) return;
+    if (this.accountKey !== (app.globalData.profile || {}).id) return;
     cache.set(
       key,
       {
@@ -158,6 +163,7 @@ Page({
         idempotency.operation(this, 'suggestOperation', { studentId: this.id })
       );
       this.suggestOperation = null;
+      idempotency.clear(this, 'suggestOperation');
       this.setData({ advice, aiError: '' });
     } catch (e) {
       if (ui.authError(this, e)) return;

@@ -215,7 +215,7 @@ module.exports = {
     request('/companion-logs', { data: id ? { student_id: id } : {} })
       .then(list)
       .then((rows) => rows.map(log)),
-  createLog: (data) =>
+  createLog: (data, key) =>
     request('/companion-logs', {
       method: 'POST',
       data: {
@@ -223,7 +223,8 @@ module.exports = {
         type: data.type,
         content: data.content,
         images: []
-      }
+      },
+      headers: key ? { 'Idempotency-Key': key } : {}
     }).then(log),
   poems: (id) =>
     request('/poems', { data: id ? { student_id: id } : {} })

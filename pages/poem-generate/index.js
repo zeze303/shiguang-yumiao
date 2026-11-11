@@ -68,12 +68,12 @@ Page({
     }
   },
   child(e) {
-    this.poemOperation = null;
+    idempotency.clear(this, 'poemOperation');
     this.setData({ uncertain: false, childIndex: +e.detail.value });
     this.loadPeriods();
   },
   period(e) {
-    this.poemOperation = null;
+    idempotency.clear(this, 'poemOperation');
     const periodIndex = +e.detail.value;
     this.setData({ uncertain: false, periodIndex, basis: this.data.records[periodIndex] });
   },
@@ -97,6 +97,7 @@ Page({
       if (!poem)
         throw new Error('诗文已返回，但列表尚未确认保存结果。请稍后查看列表，避免重复生成。');
       this.poemOperation = null;
+      idempotency.clear(this, 'poemOperation');
       this.setData({ uncertain: false });
       getApp().globalData.revision++;
       cache.invalidate('poems:list');

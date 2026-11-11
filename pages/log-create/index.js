@@ -20,6 +20,7 @@ Page({
   },
   onLoad(q) {
     this.preselected = q.id;
+    this.draftKey = wx.getStorageSync('log-draft-key') || '';
     const draft = getApp().globalData.logDraft;
     if (draft && (!q.id || draft.studentId === q.id)) {
       this.setData({ studentId: draft.studentId, type: draft.type, content: draft.content });
@@ -79,12 +80,20 @@ Page({
     }
     this.setData({ busy: true, error: '' });
     try {
-      await api.createLog({
-        student_id: this.data.children[this.data.childIndex].id,
-        type: this.data.type,
-        content: this.data.content.trim(),
-        images: []
-      });
+      if (!this.draftKey)
+        this.draftKey = 'log-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+      wx.setStorageSync('log-draft-key', this.draftKey);
+      await api.createLog(
+        {
+          student_id: this.data.children[this.data.childIndex].id,
+          type: this.data.type,
+          content: this.data.content.trim(),
+          images: []
+        },
+        this.draftKey
+      );
+      wx.removeStorageSync('log-draft-key');
+      this.draftKey = '';
       this.saved = true;
       getApp().globalData.logDraft = null;
       getApp().globalData.revision++;

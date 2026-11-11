@@ -51,6 +51,7 @@ Page({
         )
       ]);
       this.suggestOperation = null;
+      idempotency.clear(this, 'suggestOperation');
       this.lastLoadAt = Date.now();
       if (suggestion) cache.set(this.cacheKey(), { student, suggestion }, TTL);
       this.setData({ status: suggestion ? 'ready' : 'empty', student, suggestion, error: '' });
