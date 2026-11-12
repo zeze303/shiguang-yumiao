@@ -80,14 +80,20 @@ Page({
     }
     this.setData({ busy: true, error: '' });
     try {
-      if (!this.draftKey)
+      const studentId = this.data.children[this.data.childIndex].id;
+      const typed = this.data.content.trim();
+      const fingerprint = JSON.stringify([studentId, this.data.type, typed]);
+      const remembered = wx.getStorageSync('log-draft-key');
+      if (remembered && remembered.fp === fingerprint && remembered.key) this.draftKey = remembered.key;
+      else {
         this.draftKey = 'log-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
-      wx.setStorageSync('log-draft-key', this.draftKey);
+        wx.setStorageSync('log-draft-key', { fp: fingerprint, key: this.draftKey });
+      }
       await api.createLog(
         {
-          student_id: this.data.children[this.data.childIndex].id,
+          student_id: studentId,
           type: this.data.type,
-          content: this.data.content.trim(),
+          content: typed,
           images: []
         },
         this.draftKey

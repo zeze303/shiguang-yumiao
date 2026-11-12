@@ -119,6 +119,7 @@ App({
     if (!['guest', 'volunteer', 'admin'].includes(role))
       throw new Error('认证响应缺少有效角色，请重新登录确认');
     require('./utils/page').clearAccountPages('身份已更新，正在进入服务');
+    this.globalData.loginRequired = false;
     this.globalData.sessionEpoch++;
     this.globalData.revision++;
     this.globalData.logDraft = null;
