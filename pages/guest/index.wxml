@@ -116,6 +116,18 @@
       class="section-title"
     >成为陪伴的一员</view>
     <view
+      wx:if="{{lastLogin}}"
+      class="last-login"
+    >
+      <view
+        class="small"
+      >上次登录：{{lastLogin.roleText}}{{lastLogin.name ? ' · ' + lastLogin.name : ''}}{{lastLogin.timeText ? ' · ' + lastLogin.timeText : ''}}</view>
+      <button
+        class="btn full"
+        bindtap="resume"
+      >继续使用</button>
+    </view>
+    <view
       class="body-copy"
     >向项目组织申请邀请码，完成认证后进入相应服务范围。</view>
     <button

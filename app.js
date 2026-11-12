@@ -148,6 +148,13 @@ App({
     return task;
   },
   clearSession() {
+    const profile = this.globalData.profile;
+    if (profile && profile.id)
+      wx.setStorageSync('last-login', {
+        name: profile.name || '',
+        role: this.globalData.role || 'volunteer',
+        at: Date.now()
+      });
     wx.removeStorageSync('shiguang-token');
     this.globalData.session = null;
     this.globalData.role = null;

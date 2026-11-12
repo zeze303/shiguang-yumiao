@@ -47,3 +47,18 @@
   line-height: 68rpx;
   font-weight: 600;
 }
+
+.last-login {
+  margin-bottom: 24rpx;
+  padding: 24rpx;
+  border-radius: 20rpx;
+  background: var(--tint-gold);
+}
+
+.last-login .small {
+  margin-bottom: 16rpx;
+}
+
+.last-login .btn {
+  margin-top: 8rpx;
+}
