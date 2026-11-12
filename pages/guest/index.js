@@ -38,6 +38,7 @@ Page({
     try {
       app.globalData.loginRequired = false;
       const session = await app.ensureSession(true);
+      app.globalData.loginRequired = false;
       if (session.role !== 'guest') ui.enter(session.role);
       else this.setData({ lastLogin: null });
     } catch (e) {

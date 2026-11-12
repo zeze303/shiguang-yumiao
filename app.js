@@ -44,6 +44,7 @@ App({
     if (this.globalData.session && !refresh) return Promise.resolve(this.globalData.session);
     const epoch = this.globalData.sessionEpoch;
     const previousRole = this.globalData.role;
+    const wasLoginRequired = this.globalData.loginRequired;
     const task = (
       config.useMock
         ? Promise.resolve('mock-code')
@@ -88,7 +89,8 @@ App({
         this.globalData.session = session;
         this.globalData.role = session.role;
         this.globalData.profile = session.profile;
-        this.globalData.loginRequired = false;
+        // 退出态下重新登录只拿凭证，不自动恢复身份；需用户点「继续使用」或完成认证。
+        this.globalData.loginRequired = wasLoginRequired;
         if (previousRole && previousRole !== session.role) {
           this.globalData.sessionEpoch++;
           this.globalData.revision++;
